@@ -1,0 +1,12 @@
+# Workflow generated content (if any)
+.cache/
+temp/
+tmp/
+
+# Ignore workflows that are generated or copied
+# (optional - adjust if your repo uses code generation for workflows)
+generated-workflows/
+
+# GitHub Actions workflow logs (local or simulated)
+.github/workflows/*.log
+.github/workflows/*.bak
