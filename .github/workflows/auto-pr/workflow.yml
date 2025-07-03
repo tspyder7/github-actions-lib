@@ -1,0 +1,159 @@
+# Reusable GitHub Actions workflow: Auto PR from based on pr branch hierarchy
+# Automatically generates PRs with grouped release notes and appends updates
+
+name: Auto PR from Development to Main
+
+on:
+  workflow_call:
+    # Inputs required when calling this workflow
+    inputs:
+      pr-branch-hierarchy-json:
+        type: string
+        required: true
+
+    # Secrets passed to the reusable workflow
+    secrets:
+      GH_TOKEN:
+        required: true
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      PR_BRANCH_HIERARCHY_JSON: ${{ inputs.pr-branch-hierarchy-json }}
+
+    steps:
+      # STEP 1: Code checkout
+      - name: Checkout code
+        id: checkout-code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # STEP 2: Setup GitHub CLI
+      - name: Set up GitHub CLI
+        id: setup-github-cli
+        uses: cli/cli-action@v2
+
+      # STEP 3: Install jq for JSON parsing
+      - name: Install jq
+        id: install-libs
+        run: sudo apt-get update && sudo apt-get install jq -y
+
+      # STEP 3.1: Validate pr PR branch hierarchy JSON using jq
+      - name: Validate PR branch hierarchy JSON
+        id: validate-json
+        run: |
+          if ! echo "$PR_BRANCH_HIERARCHY_JSON" | jq empty > /dev/null 2>&1; then
+            echo "::error ::PR_BRANCH_HIERARCHY_JSON is not valid JSON"
+            exit 1
+          fi
+
+      # STEP 4: Determine the target base branch from the allowed hierarchy
+      - name: Parse Branch Hierarchy JSON
+        id: parse-json
+        run: |
+          BASE_BRANCH=""
+          for key in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r 'keys[]'); do
+            for child in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r ".[\"$key\"][]"); do
+              if [[ "$GITHUB_REF_NAME" == "$child" ]]; then
+                BASE_BRANCH="$key"
+                break
+              fi
+            done
+          done
+
+          if [[ -z "$BASE_BRANCH" ]]; then
+            echo "❌ This branch is not allowed to create PRs into any protected branch."
+            exit 1
+          fi
+
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+
+      # STEP 5: Check if the current branch has new commits ahead of base
+      - name: Check if branch is ahead of base
+        id: check-diff
+        run: |
+          git fetch origin ${{ steps.parse-json.outputs.base_branch }}
+          AHEAD=$(git rev-list origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --count)
+          echo "ahead_count=$AHEAD" >> $GITHUB_OUTPUT
+
+      # STEP 6: Check if an open PR already exists for this branch → base
+      - name: Check for existing PR
+        id: check-pr
+        run: |
+          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq '.[0]')
+          if [[ "$PR_JSON" != "null" ]]; then
+            PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+            echo "pr_exists=true" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      # STEP 7: Generate release notes grouped by commit type
+      - name: Generate grouped release notes
+        id: release_notes
+        if: ${{ steps.check-diff.outputs.ahead_count != '0' }}
+        run: |
+          git fetch origin ${{ steps.parse-json.outputs.base_branch }}
+
+          FEATURES=""
+          FIXES=""
+          CHORES=""
+          OTHERS=""
+
+          while IFS= read -r line; do
+            MSG=$(echo "$line" | sed 's/^.* //')
+            AUTHOR=$(echo "$line" | awk '{print $NF}')
+            ENTRY="- ${MSG} (${AUTHOR})"
+
+            [[ "$MSG" == feat:* ]] && FEATURES+="${ENTRY}\n"
+            [[ "$MSG" == fix:* ]] && FIXES+="${ENTRY}\n"
+            [[ "$MSG" == chore:* || "$MSG" == refactor:* ]] && CHORES+="${ENTRY}\n"
+            [[ "$MSG" != feat:* && "$MSG" != fix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="${ENTRY}\n"
+          done < <(git log origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --pretty=format:"%s %an")
+
+          NOTES=""
+          [[ -n "$FEATURES" ]] && NOTES+="### ✨ Features\n${FEATURES}\n"
+          [[ -n "$FIXES" ]]    && NOTES+="### 🐛 Fixes\n${FIXES}\n"
+          [[ -n "$CHORES" ]]   && NOTES+="### 🔧 Chores / Refactors\n${CHORES}\n"
+          [[ -n "$OTHERS" ]]   && NOTES+="### 📦 Others\n${OTHERS}\n"
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # STEP 8: Create PR if not already existing
+      - name: Create PR
+        if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'false'
+        run: |
+          gh pr create \
+            --base "${{ steps.parse-json.outputs.base_branch }}" \
+            --head "$GITHUB_REF_NAME" \
+            --title "Auto PR: $GITHUB_REF_NAME → ${{ steps.parse-json.outputs.base_branch }}" \
+            --body "${{ steps.release_notes.outputs.notes }}" \
+            --label "auto-pr"
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      # STEP 9: Append to existing PR if already open
+      - name: Append to existing PR
+        if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'true'
+        run: |
+          PR_NUM=${{ steps.check-pr.outputs.pr_number }}
+          EXISTING_BODY=$(gh pr view "$PR_NUM" --json body -q '.body')
+          NEW_NOTES="${{ steps.release_notes.outputs.notes }}"
+
+          TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+          APPEND="\n\n### 🔄 Update on $TIMESTAMP\n$NEW_NOTES"
+
+          gh pr edit "$PR_NUM" --body "$EXISTING_BODY$APPEND"
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
