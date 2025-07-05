@@ -31,8 +31,15 @@ jobs:
     with:
       allowed-branches-hierarchy-json: |
         {
-          "main": ["dev"],
-          "dev": ["feature/login", "feature/signup"]
+            "release": [
+                "main"
+            ],
+            "main": [
+                "stage"
+            ],
+            "stage": [
+                "development"
+            ]
         }
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
