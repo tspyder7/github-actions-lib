@@ -10,28 +10,28 @@ Each workflow is modular, reusable via `workflow_call`, and configurable via inp
 
 ---
 
-## 📁 Available Workflows
+## 📁 Available Reusable Workflows
 
-### 1. [`auto-pr.yml`](.github/workflows/auto-pr/workflow.yml)
+### 1. [`auto-pr.yml`](.github/workflows/auto-pr.yml)
 
 **Automatically creates or updates pull requests** based on a configurable branch hierarchy. It also groups and appends release notes based on commit message types (e.g., `feat`, `fix`, `chore`).
 
-🔗 [View README](./.github/workflows/auto-pr/README.md) (or inline the full usage guide in the same file)
+🔗 [View README](.github/docs/auto-pr.md) (or inline the full usage guide in the same file)
 
 ---
 
-### 2. [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy/workflow.yml)
+### 2. [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml)
 
 **Validates pull request source and target branches** against an allowed hierarchy. If a PR is opened from an unauthorized branch, it automatically comments and closes it.
 
-🔗 [View README](./.github/workflows/enforce-pr-hierarchy/README.md)
+🔗 [View README](.github/docs/enforce-pr-hierarchy.md)
 
 ---
 
-### 3. [`npm-publish.yml`](.github/workflows/npm-publish/workflow.yml)
+### 3. [`npm-publish.yml`](.github/workflows/npm-publish.yml)
 
 **Publishes your package to the NPM registry** using your preferred package manager (`npm`, `yarn`, or `pnpm`). It supports automatic build and dependency installation before publishing.
 
-🔗 [View README](./.github/workflows/npm-publish/README.md)
+🔗 [View README](.github/docs/npm-publish.md)
 
 ---
