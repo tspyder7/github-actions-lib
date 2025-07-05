@@ -1,4 +1,4 @@
-# 🚀 Publish to NPM Workflow
+# 🚀 [Publish to NPM Workflow](../workflows/npm-publish.yml)
 
 This reusable workflow automates publishing your package to the NPM registry using the specified package manager. It supports **npm**, **yarn**, and **pnpm**.
 
@@ -28,7 +28,7 @@ on:
 
 jobs:
   publish-package:
-    uses: your-org/your-repo/.github/workflows/npm-publish.yml@main
+    uses: tspyder7/github-action-lib/.github/workflows/npm-publish.yml@main
     with:
       node-version: "20"
       registry-url: "https://registry.npmjs.org/"
