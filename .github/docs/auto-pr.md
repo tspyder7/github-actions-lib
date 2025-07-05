@@ -1,4 +1,4 @@
-# 🔁 Auto PR from PR Branch Hierarchy Workflow
+# 🔁 [Auto PR from PR Branch Hierarchy Workflow](../workflows/auto-pr.yml)
 
 This reusable GitHub Actions workflow automatically creates or updates pull requests based on a predefined branch hierarchy. It groups release notes by commit type and appends them to the PR body.
 
@@ -35,7 +35,7 @@ on:
 
 jobs:
   call-auto-pr:
-    uses: your-org/your-repo/.github/workflows/auto-pr.yml@main
+    uses: tspyder7/github-actions-lib/.github/workflows/auto-pr.yml@main
     with:
       pr-branch-hierarchy-json: |
         {
