@@ -28,10 +28,10 @@ jobs:
       ALLOWED_BRANCHES_HIERARCHY_JSON: ${{ inputs.allowed-branches-hierarchy-json }}
 
     steps:
-      # STEP 1: Install jq for JSON parsing
-      - name: Install jq
-        id: install-libs
-        run: sudo apt-get update && sudo apt-get install jq -y
+      # # STEP 1: Install jq for JSON parsing
+      # - name: Install jq
+      #   id: install-libs
+      #   run: sudo apt-get update && sudo apt-get install jq -y
 
       # STEP 2: Validate the JSON format of the allowed branch hierarchy input
       - name: Validate Allowed PR Hierarchy JSON
@@ -82,16 +82,16 @@ jobs:
           HEAD="${{ steps.validate-pr-hierarchy.outputs.head }}"
           ALLOWED="${{ steps.validate-pr-hierarchy.outputs.allowed }}"
 
+          COMMENT="❌ This pull request was automatically closed.\n\n**Reason**: PRs to \`$BASE\` must come from one of the following branches:\n- \`$ALLOWED\`\n\nCurrent source: \`$HEAD\`."
+
+          JSON_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
+
           # Post a comment on the PR explaining why it is closed
           curl -s -X POST \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments \
-            -d @- <<EOF
-            {
-              "body": "❌ This pull request was automatically closed.\n\n**Reason**: PRs to \`$BASE\` must come from one of the following branches:\n- \`$ALLOWED\`\n\nCurrent source: \`$HEAD\`."
-            }
-            EOF
+            -d "$JSON_PAYLOAD"
 
           # Close the PR using GitHub's API
           curl -s -X PATCH \
