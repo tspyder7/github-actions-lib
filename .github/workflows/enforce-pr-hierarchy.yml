@@ -83,7 +83,10 @@ jobs:
           HEAD="${{ steps.validate-pr-hierarchy.outputs.head }}"
           ALLOWED="${{ steps.validate-pr-hierarchy.outputs.allowed }}"
 
-          COMMENT="❌ This pull request was automatically closed.\n\n**Reason**: PRs to \`$BASE\` must come from one of the following branches:\n- \`$ALLOWED\`\n\nCurrent source: \`$HEAD\`."
+          COMMENT="❌ This pull request was automatically closed.
+          **Reason**: PRs to \`$BASE\` must come from one of the following branches:-
+          \`$ALLOWED\`
+          Current source: \`$HEAD\`."
 
           JSON_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
 
