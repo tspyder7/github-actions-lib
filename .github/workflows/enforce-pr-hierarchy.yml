@@ -19,6 +19,7 @@ on:
 jobs:
   enforce-pr-hierarchy:
     runs-on: ubuntu-latest
+    if: github.event.action != 'edited' || github.event.changes.base
     permissions:
       contents: write
       pull-requests: write
