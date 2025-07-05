@@ -1,4 +1,4 @@
-# 🚦 Enforce PR Branch Hierarchy Workflow
+# 🚦 [Enforce PR Branch Hierarchy Workflow](../workflows/enforce-pr-hierarchy.yml)
 
 This reusable GitHub Actions workflow enforces branch hierarchy rules for pull requests. If a PR is opened from a disallowed source branch into a protected base branch, the workflow will automatically comment on and close the PR.
 
@@ -27,7 +27,7 @@ on:
 
 jobs:
   enforce-pr:
-    uses: your-org/your-repo/.github/workflows/enforce-pr-hierarchy.yml@main
+    uses: tspyder7/github-actions-lib/.github/workflows/enforce-pr-hierarchy.yml@main
     with:
       allowed-branches-hierarchy-json: |
         {
