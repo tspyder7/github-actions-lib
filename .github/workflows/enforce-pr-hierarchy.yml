@@ -17,7 +17,7 @@ on:
         required: true
 
 jobs:
-  enforce-pr-hierarchy:
+  call-enforce-pr-hierarchy:
     runs-on: ubuntu-latest
     if: github.event.action != 'edited' || github.event.changes.base
     permissions:

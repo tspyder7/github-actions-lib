@@ -23,10 +23,17 @@ name: Enforce PR Rules
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
 
 jobs:
-  enforce-pr:
+  enforce-pr-hierarchy:
+    permissions:
+      contents: write
+      pull-requests: write
     uses: tspyder7/github-actions-lib/.github/workflows/enforce-pr-hierarchy.yml@main
     with:
       allowed-branches-hierarchy-json: |
@@ -42,4 +49,5 @@ jobs:
             ]
         }
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
