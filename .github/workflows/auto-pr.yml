@@ -190,12 +190,8 @@ jobs:
         if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'true'
         run: |
           PR_NUM=${{ steps.check-pr.outputs.pr_number }}
-          EXISTING_BODY=$(gh pr view "$PR_NUM" --json body -q '.body')
           NEW_NOTES="${{ steps.release_notes.outputs.notes }}"
 
-          TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
-          APPEND="\n\n### 🔄 Update on $TIMESTAMP\n$NEW_NOTES"
-
-          gh pr edit "$PR_NUM" --body "$EXISTING_BODY$APPEND"
+          gh pr edit "$PR_NUM" --body "$NEW_NOTES"
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
