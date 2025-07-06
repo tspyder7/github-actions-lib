@@ -97,7 +97,7 @@ jobs:
       - name: Check for existing PR
         id: check-pr
         run: |
-          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq '.[0]')
+          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq 'if length == 0 then "null" else .[0].number end')
           if [[ "$PR_JSON" != "null" ]]; then
             PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
             echo "pr_exists=true" >> $GITHUB_OUTPUT
