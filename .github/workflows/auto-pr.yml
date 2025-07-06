@@ -34,17 +34,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      # STEP 2: Setup GitHub CLI
-      - name: Set up GitHub CLI
-        id: setup-github-cli
-        uses: cli/cli-action@v2
+      # # STEP 2: Setup GitHub CLI
+      # - name: Set up GitHub CLI
+      #   id: setup-github-cli
+      #   uses: cli/cli-action@v2
 
-      # STEP 3: Install jq for JSON parsing
-      - name: Install jq
-        id: install-libs
-        run: sudo apt-get update && sudo apt-get install jq -y
+      # # STEP 3: Install jq for JSON parsing
+      # - name: Install jq
+      #   id: install-libs
+      #   run: sudo apt-get update && sudo apt-get install jq -y
 
-      # STEP 3.1: Validate pr PR branch hierarchy JSON using jq
+      # STEP 2: Validate pr PR branch hierarchy JSON using jq
       - name: Validate PR branch hierarchy JSON
         id: validate-json
         run: |
@@ -53,7 +53,7 @@ jobs:
             exit 1
           fi
 
-      # STEP 4: Determine the target base branch from the allowed hierarchy
+      # STEP 3: Determine the target base branch from the allowed hierarchy
       - name: Parse Branch Hierarchy JSON
         id: parse-json
         run: |
@@ -74,7 +74,7 @@ jobs:
 
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
 
-      # STEP 4.1: Check if base branch exists remotely
+      # STEP 3.1: Check if base branch exists remotely
       - name: Ensure base branch exists on remote
         id: check-if-base-branch-exists
         run: |
@@ -83,7 +83,7 @@ jobs:
             exit 1
           }
 
-      # STEP 5: Check if the current branch has new commits ahead of base
+      # STEP 4: Check if the current branch has new commits ahead of base
       - name: Check if branch is ahead of base
         id: check-diff
         run: |
@@ -91,7 +91,7 @@ jobs:
           AHEAD=$(git rev-list origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --count)
           echo "ahead_count=$AHEAD" >> $GITHUB_OUTPUT
 
-      # STEP 6: Check if an open PR already exists for this branch → base
+      # STEP 5: Check if an open PR already exists for this branch → base
       - name: Check for existing PR
         id: check-pr
         run: |
@@ -106,7 +106,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      # STEP 7: Generate release notes grouped by commit type
+      # STEP 6: Generate release notes grouped by commit type
       - name: Generate grouped release notes
         id: release_notes
         if: ${{ steps.check-diff.outputs.ahead_count != '0' }}
@@ -139,7 +139,7 @@ jobs:
           echo -e "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # STEP 8: Create PR if not already existing
+      # STEP 7: Create PR if not already existing
       - name: Create PR
         if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'false'
         run: |
@@ -152,7 +152,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      # STEP 9: Append to existing PR if already open
+      # STEP 8: Append to existing PR if already open
       - name: Append to existing PR
         if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'true'
         run: |
