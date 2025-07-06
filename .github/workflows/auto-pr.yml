@@ -88,7 +88,7 @@ jobs:
         id: check-for-auto-pr-label-else-create
         run: |
           LABEL_NAME="auto-pr"
-          LABEL_COLOR="ededed"
+          LABEL_COLOR="34ebba"
           LABEL_DESCRIPTION="Automatically generated PR"
 
           # Check if label exists
