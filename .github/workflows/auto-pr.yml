@@ -74,6 +74,15 @@ jobs:
 
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
 
+      # STEP 4.1: Check if base branch exists remotely
+      - name: Ensure base branch exists on remote
+        id: check-if-base-branch-exists
+        run: |
+          git ls-remote --exit-code --heads origin "${{ steps.parse-json.outputs.base_branch }}" || {
+            echo "::error ::Base branch '${{ steps.parse-json.outputs.base_branch }}' does not exist on remote."
+            exit 1
+          }
+
       # STEP 5: Check if the current branch has new commits ahead of base
       - name: Check if branch is ahead of base
         id: check-diff
