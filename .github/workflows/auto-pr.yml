@@ -115,7 +115,7 @@ jobs:
       - name: Check for existing PR
         id: check-pr
         run: |
-          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq 'if length == 0 then "null" else .[0].number end')
+          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq 'if length == 0 then "null" else .[0] end')
           if [[ "$PR_JSON" != "null" ]]; then
             PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
             echo "pr_exists=true" >> $GITHUB_OUTPUT
@@ -142,21 +142,29 @@ jobs:
           OTHERS=""
 
           while IFS= read -r line; do
-            MSG=$(echo "$line" | sed 's/^.* //')
-            AUTHOR=$(echo "$line" | awk '{print $NF}')
-            ENTRY="- ${MSG} (${AUTHOR})"
+            IFS='~' read -r MSG AUTHOR <<< "$line"
+            MSG=$(echo "$MSG" | xargs)       # trim leading/trailing spaces
+            AUTHOR=$(echo "$AUTHOR" | xargs) # trim leading/trailing spaces
+            ENTRY="- ${MSG} (${AUTHOR})";
+            # logs
+            echo "line: $line";
+            echo "msg: $MSG";
+            echo "author: $AUTHOR";
+            echo "entry: $ENTRY";
+            echo "-------------------"
 
-            [[ "$MSG" == feat:* ]] && FEATURES+="${ENTRY}\n"
-            [[ "$MSG" == fix:* ]] && FIXES+="${ENTRY}\n"
-            [[ "$MSG" == chore:* || "$MSG" == refactor:* ]] && CHORES+="${ENTRY}\n"
-            [[ "$MSG" != feat:* && "$MSG" != fix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="${ENTRY}\n"
-          done < <(git log origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --pretty=format:"%s %an")
+            [[ "$MSG" == feat:* ]] && FEATURES+="- $(echo "${MSG#feat:}" | xargs) (${AUTHOR})\n"
+            [[ "$MSG" == fix:* ]] && FIXES+="- $(echo "${MSG#fix:}" | xargs) (${AUTHOR})\n"
+            [[ "$MSG" == chore:* ]] && CHORES+="- $(echo "${MSG#chore:}" | xargs) (${AUTHOR})\n"
+            [[ "$MSG" == refactor:* ]] && CHORES+="- $(echo "${MSG#refactor:}" | xargs) (${AUTHOR})\n"
+            [[ "$MSG" != feat:* && "$MSG" != fix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="- $MSG (${AUTHOR})\n"
+          done < <(git log origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --pretty=format:"%s ~ %an")
 
-          NOTES=""
-          [[ -n "$FEATURES" ]] && NOTES+="### ✨ Features\n${FEATURES}\n"
-          [[ -n "$FIXES" ]]    && NOTES+="### 🐛 Fixes\n${FIXES}\n"
-          [[ -n "$CHORES" ]]   && NOTES+="### 🔧 Chores / Refactors\n${CHORES}\n"
-          [[ -n "$OTHERS" ]]   && NOTES+="### 📦 Others\n${OTHERS}\n"
+          NOTES="## RELEASE NOTES:\n"
+          [[ -n "$FEATURES" ]] && NOTES+="### ✨ FEATURES\n${FEATURES}\n---\n"
+          [[ -n "$FIXES" ]]    && NOTES+="### 🐛 FIXES\n${FIXES}\n---\n"
+          [[ -n "$CHORES" ]]   && NOTES+="### 🔧 CHORES / Refactors\n${CHORES}\n---\n"
+          [[ -n "$OTHERS" ]]   && NOTES+="### 📦 OTHERS\n${OTHERS}\n---\n"
 
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo -e "$NOTES" >> $GITHUB_OUTPUT
