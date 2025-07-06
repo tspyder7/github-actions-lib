@@ -16,7 +16,11 @@ This reusable GitHub Actions workflow automatically creates or updates pull requ
   - 📦 Others
 - Appends release notes to existing open PRs
 
----
+## ✔️ Requirements:
+- Need to create Github **_Personal Access Token_** with fine grade access
+    - `Contents` -> `Read & Write`
+    - `Pull Requests` -> `Read & Write`
+- Create a secret `GH_REPO_TOKEN` in repository and store above token in it.
 
 ## 📦 Usage
 
@@ -25,22 +29,35 @@ To use this workflow, call it from another workflow using `workflow_call`.
 ### Example Caller Workflow
 
 ```yaml
-name: Create Auto PR
+name: Generate Auto PR
 
 on:
   push:
     branches:
-      - dev
-      - feature/*
+      - development
+      - stage
+      - main
 
 jobs:
   call-auto-pr:
+    permissions:
+      contents: write
+      pull-requests: write
+
     uses: tspyder7/github-actions-lib/.github/workflows/auto-pr.yml@main
     with:
       pr-branch-hierarchy-json: |
         {
-          "main": ["dev"],
-          "dev": ["feature/login", "feature/signup"]
+          "release": [
+              "main"
+          ],
+          "main": [
+              "stage"
+          ],
+          "stage": [
+              "development"
+          ]
         }
     secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_REPO_TOKEN  }}
+```
