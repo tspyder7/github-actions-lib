@@ -83,6 +83,24 @@ jobs:
             exit 1
           }
 
+      # STEP 3.2: check if auto-pr label exists else create
+      - name: Ensure 'auto-pr' label exists
+        id: check-for-auto-pr-label-else-create
+        run: |
+          LABEL_NAME="auto-pr"
+          LABEL_COLOR="ededed"
+          LABEL_DESCRIPTION="Automatically generated PR"
+
+          # Check if label exists
+          if ! gh label list --json name | jq -e ".[] | select(.name == \"$LABEL_NAME\")" > /dev/null; then
+            echo "Label '$LABEL_NAME' not found. Creating it..."
+            gh label create "$LABEL_NAME" --color "$LABEL_COLOR" --description "$LABEL_DESCRIPTION"
+          else
+            echo "Label '$LABEL_NAME' already exists."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
       # STEP 4: Check if the current branch has new commits ahead of base
       - name: Check if branch is ahead of base
         id: check-diff
