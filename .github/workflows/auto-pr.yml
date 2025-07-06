@@ -91,6 +91,8 @@ jobs:
           AHEAD=$(git rev-list origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --count)
           echo "ahead_count=$AHEAD" >> $GITHUB_OUTPUT
 
+          echo $GITHUB_OUTPUT
+
       # STEP 5: Check if an open PR already exists for this branch → base
       - name: Check for existing PR
         id: check-pr
@@ -103,6 +105,9 @@ jobs:
           else
             echo "pr_exists=false" >> $GITHUB_OUTPUT
           fi
+
+          echo $GITHUB_OUTPUT
+
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -138,6 +143,8 @@ jobs:
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo -e "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+          echo $GITHUB_OUTPUT
 
       # STEP 7: Create PR if not already existing
       - name: Create PR
