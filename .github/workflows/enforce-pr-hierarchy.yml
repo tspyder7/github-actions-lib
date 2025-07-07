@@ -1,0 +1,105 @@
+# Reusable GitHub Actions workflow: Enforce PR Branch Hierarchy
+# Automatically generates PRs with grouped release notes and appends updates
+
+name: Enforce PR Branch Hierarchy
+
+on:
+  workflow_call:
+    # Inputs required when calling this workflow
+    inputs:
+      allowed-branches-hierarchy-json:
+        type: string
+        required: true
+
+    # Secrets passed to the reusable workflow
+    secrets:
+      GH_TOKEN:
+        required: true
+
+jobs:
+  call-enforce-pr-hierarchy:
+    runs-on: ubuntu-latest
+    if: github.event.action != 'edited' || github.event.changes.base
+    permissions:
+      contents: write
+      pull-requests: write
+
+    # Environment variable to hold the allowed PR structure (as JSON)
+    env:
+      ALLOWED_BRANCHES_HIERARCHY_JSON: ${{ inputs.allowed-branches-hierarchy-json }}
+
+    steps:
+      # # STEP 1: Install jq for JSON parsing
+      # - name: Install jq
+      #   id: install-libs
+      #   run: sudo apt-get update && sudo apt-get install jq -y
+
+      # STEP 2: Validate the JSON format of the allowed branch hierarchy input
+      - name: Validate Allowed PR Hierarchy JSON
+        id: validate-json
+        run: |
+          if ! echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq empty > /dev/null 2>&1; then
+            echo "::error ::ALLOWED_BRANCHES_HIERARCHY_JSON is not valid JSON"
+            exit 1
+          fi
+
+      # STEP 3: Check whether the PR source branch is allowed for the target base branch
+      - name: Validate PR Hierarchy
+        id: validate-pr-hierarchy
+        run: |
+          BASE="${{ github.event.pull_request.base.ref }}"
+          HEAD="${{ github.event.pull_request.head.ref }}"
+
+          # Extract allowed branches from the JSON based on the base branch
+          ALLOWED=$(echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq -r ".[\"$BASE\"][]?" || true)
+
+          # If there's no restriction, mark PR as valid
+          if [ -z "$ALLOWED" ]; then
+            echo "is_valid=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # If the head branch is in the allowed list, it's valid
+          if echo "$ALLOWED" | grep -Fxq "$HEAD"; then
+            echo "is_valid=true" >> "$GITHUB_OUTPUT"
+          else
+            # Otherwise, mark as invalid and export data for next step
+            echo "is_valid=false" >> "$GITHUB_OUTPUT"
+            echo "allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
+            echo "base=$BASE" >> "$GITHUB_OUTPUT"
+            echo "head=$HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+      # STEP 4: Automatically comment and close PR if the hierarchy is invalid
+      - name: Comment and close PR if invalid
+        if: ${{ steps.validate-pr-hierarchy.outputs.is_valid == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          BASE="${{ steps.validate-pr-hierarchy.outputs.base }}"
+          HEAD="${{ steps.validate-pr-hierarchy.outputs.head }}"
+          ALLOWED="${{ steps.validate-pr-hierarchy.outputs.allowed }}"
+
+          COMMENT="❌ This pull request was automatically closed.
+          **Reason**: PRs to \`$BASE\` must come from one of the following branches:-
+          \`$ALLOWED\`
+          Current source: \`$HEAD\`."
+
+          JSON_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
+
+          # Post a comment on the PR explaining why it is closed
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments \
+            -d "$JSON_PAYLOAD"
+
+          # Close the PR using GitHub's API
+          curl -s -X PATCH \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/$REPO/pulls/$PR_NUMBER \
+            -d '{"state":"closed"}'
