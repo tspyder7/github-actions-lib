@@ -1,0 +1,100 @@
+# Reusable GitHub Actions workflow: Publish to NPM
+# Publishes the NPM Package
+
+name: Publish to NPM
+
+on:
+  workflow_call:
+    inputs:
+      # Node.js version to use
+      node-version:
+        type: string
+        default: "22"
+        required: false
+
+      # NPM registry URL to publish to
+      registry-url:
+        type: string
+        default: https://registry.npmjs.org/
+        required: false
+
+      # The package manager to use (must be pnpm, yarn, or npm)
+      package-manager:
+        type: string
+        required: true
+
+    secrets:
+      # NPM token used for authentication during publish
+      NPM_TOKEN:
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Define environment variables for use in shell scripts and expressions
+    env:
+      NODE_VERSION: ${{ inputs.node-version }}
+      REGISTRY_URL: ${{ inputs.registry-url }}
+      PACKAGE_MANAGER: ${{ inputs.package-manager }}
+
+    steps:
+      # STEP 1: Validate the package manager input
+      - name: Validate package manager
+        id: validate
+        run: |
+          case "$PACKAGE_MANAGER" in
+            pnpm|yarn|npm) echo "✅ Valid package manager: $PACKAGE_MANAGER" ;;
+            *) echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, npm" && exit 1 ;;
+          esac
+
+      # STEP 2: Checkout the repository code
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@v4
+
+      # STEP 3: Setup the specified Node.js version and registry URL
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ env.REGISTRY_URL }}
+
+      # STEP 4a: Install pnpm globally if selected
+      - name: Install pnpm
+        id: install-pnpm
+        if: ${{ env.PACKAGE_MANAGER == 'pnpm' }}
+        run: npm install -g pnpm
+
+      # STEP 4b: Install yarn globally if selected
+      - name: Install yarn
+        id: install-yarn
+        if: ${{ env.PACKAGE_MANAGER == 'yarn' }}
+        run: npm install -g yarn
+
+      # STEP 5: Install project dependencies using the selected package manager
+      - name: Install dependencies
+        id: install-deps
+        run: |
+          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then pnpm install;
+          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then yarn install;
+          else npm install; fi
+
+      # STEP 6: Run the build script
+      - name: Build project
+        id: build
+        run: |
+          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then pnpm run build;
+          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then yarn build;
+          else npm run build; fi
+
+      # STEP 7: Publish the package to the NPM registry
+      - name: Publish to NPM
+        id: publish
+        run: |
+          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then pnpm publish --access public;
+          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then yarn publish --access public --non-interactive;
+          else npm publish --access public; fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
