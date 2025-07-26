@@ -29,12 +29,7 @@ jobs:
       ALLOWED_BRANCHES_HIERARCHY_JSON: ${{ inputs.allowed-branches-hierarchy-json }}
 
     steps:
-      # # STEP 1: Install jq for JSON parsing
-      # - name: Install jq
-      #   id: install-libs
-      #   run: sudo apt-get update && sudo apt-get install jq -y
-
-      # STEP 2: Validate the JSON format of the allowed branch hierarchy input
+      # STEP 1: Validate the JSON format of the allowed branch hierarchy input
       - name: Validate Allowed PR Hierarchy JSON
         id: validate-json
         run: |
@@ -43,7 +38,7 @@ jobs:
             exit 1
           fi
 
-      # STEP 3: Check whether the PR source branch is allowed for the target base branch
+      # STEP 2: Check whether the PR source branch is allowed for the target base branch
       - name: Validate PR Hierarchy
         id: validate-pr-hierarchy
         run: |
@@ -70,7 +65,7 @@ jobs:
             echo "head=$HEAD" >> "$GITHUB_OUTPUT"
           fi
 
-      # STEP 4: Automatically comment and close PR if the hierarchy is invalid
+      # STEP 3: Automatically comment and close PR if the hierarchy is invalid
       - name: Comment and close PR if invalid
         if: ${{ steps.validate-pr-hierarchy.outputs.is_valid == 'false' }}
         env:
