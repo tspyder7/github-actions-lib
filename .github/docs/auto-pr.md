@@ -12,6 +12,7 @@ This reusable GitHub Actions workflow automatically creates or updates pull requ
 - Groups commit messages into:
   - ✨ Features
   - 🐛 Fixes
+  - 🚑 Hotfix
   - 🔧 Chores / Refactors
   - 📦 Others
 - Appends release notes to existing open PRs
