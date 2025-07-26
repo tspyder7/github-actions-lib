@@ -128,14 +128,16 @@ jobs:
 
           FEATURES=""
           FIXES=""
+          HOTFIX=""
           CHORES=""
           OTHERS=""
 
           while IFS= read -r line; do
             IFS='~' read -r MSG AUTHOR <<< "$line"
-            MSG=$(echo "$MSG" | xargs)       # trim leading/trailing spaces
+            MSG=$(echo "$MSG" | xargs | sed 's/^[^a-zA-Z]*//')       # trim leading/trailing spaces
             AUTHOR=$(echo "$AUTHOR" | xargs) # trim leading/trailing spaces
             ENTRY="- ${MSG} (${AUTHOR})";
+
             # logs
             echo "line: $line";
             echo "msg: $MSG";
@@ -145,14 +147,16 @@ jobs:
 
             [[ "$MSG" == feat:* ]] && FEATURES+="- $(echo "${MSG#feat:}" | xargs) (${AUTHOR})\n"
             [[ "$MSG" == fix:* ]] && FIXES+="- $(echo "${MSG#fix:}" | xargs) (${AUTHOR})\n"
+            [[ "$MSG" == hotfix:* ]] && HOTFIX+="- $(echo "${MSG#hotfix:}" | xargs) (${AUTHOR})\n"
             [[ "$MSG" == chore:* ]] && CHORES+="- $(echo "${MSG#chore:}" | xargs) (${AUTHOR})\n"
             [[ "$MSG" == refactor:* ]] && CHORES+="- $(echo "${MSG#refactor:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" != feat:* && "$MSG" != fix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="- $MSG (${AUTHOR})\n"
+            [[ "$MSG" != feat:* && "$MSG" != fix:*  && "$MSG" != hotfix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="- $MSG (${AUTHOR})\n"
           done < <(git log origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --pretty=format:"%s ~ %an")
 
           NOTES="## RELEASE NOTES:\n"
           [[ -n "$FEATURES" ]] && NOTES+="### ✨ FEATURES\n${FEATURES}\n---\n"
           [[ -n "$FIXES" ]]    && NOTES+="### 🐛 FIXES\n${FIXES}\n---\n"
+          [[ -n "$HOTFIX" ]]   && NOTES+="### 🚑 HOTFIX\n${HOTFIX}\n---\n"
           [[ -n "$CHORES" ]]   && NOTES+="### 🔧 CHORES / Refactors\n${CHORES}\n---\n"
           [[ -n "$OTHERS" ]]   && NOTES+="### 📦 OTHERS\n${OTHERS}\n---\n"
 
