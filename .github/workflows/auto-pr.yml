@@ -34,16 +34,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # # STEP 2: Setup GitHub CLI
-      # - name: Set up GitHub CLI
-      #   id: setup-github-cli
-      #   uses: cli/cli-action@v2
-
-      # # STEP 3: Install jq for JSON parsing
-      # - name: Install jq
-      #   id: install-libs
-      #   run: sudo apt-get update && sudo apt-get install jq -y
-
       # STEP 2: Validate pr PR branch hierarchy JSON using jq
       - name: Validate PR branch hierarchy JSON
         id: validate-json
