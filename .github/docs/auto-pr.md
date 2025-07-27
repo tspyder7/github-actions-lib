@@ -49,15 +49,15 @@ jobs:
     with:
       pr-branch-hierarchy-json: |
         {
-          "release": [
-              "main"
-          ],
-          "main": [
-              "stage"
-          ],
-          "stage": [
-              "development"
-          ]
+            "release": [
+                "stage"
+            ],
+            "stage": [
+                "main"
+            ],
+            "main": [
+                "development"
+            ]
         }
     secrets:
       GH_TOKEN: ${{ secrets.GH_REPO_TOKEN  }}
