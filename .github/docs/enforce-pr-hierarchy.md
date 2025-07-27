@@ -39,12 +39,12 @@ jobs:
       allowed-branches-hierarchy-json: |
         {
             "release": [
-                "main"
-            ],
-            "main": [
                 "stage"
             ],
             "stage": [
+                "main"
+            ],
+            "main": [
                 "development"
             ]
         }
