@@ -54,8 +54,17 @@ jobs:
             exit 0
           fi
 
+          # Check if it matches the pattern
+          MATCHED=false
+          for branch_pattern in $ALLOWED; do
+            if [[ "$HEAD" =~ ^$branch_pattern$ ]]; then
+              MATCHED=true
+              break
+            fi
+          done
+
           # If the head branch is in the allowed list, it's valid
-          if echo "$ALLOWED" | grep -Fxq "$HEAD"; then
+          if [ "$MATCHED" = true ]; then
             echo "is_valid=true" >> "$GITHUB_OUTPUT"
           else
             # Otherwise, mark as invalid and export data for next step
