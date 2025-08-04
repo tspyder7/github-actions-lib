@@ -50,7 +50,7 @@ jobs:
           BASE_BRANCH=""
           for key in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r 'keys[]'); do
             for child in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r ".[\"$key\"][]"); do
-              if [[ "$GITHUB_REF_NAME" == "$child" ]]; then
+              if [[ "$GITHUB_REF_NAME" =~ ^$child$ ]]; then
                 BASE_BRANCH="$key"
                 break
               fi
