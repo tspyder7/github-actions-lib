@@ -1,17 +1,14 @@
 # Reusable GitHub Actions workflow: Auto PR from based on pr branch hierarchy
 # Automatically generates PRs with grouped release notes and appends updates
 
-name: Auto PR from Development to Main
+name: Auto PR Generation
 
 on:
   workflow_call:
-    # Inputs required when calling this workflow
     inputs:
       pr-branch-hierarchy-json:
         type: string
         required: true
-
-    # Secrets passed to the reusable workflow
     secrets:
       GH_TOKEN:
         required: true
@@ -23,169 +20,335 @@ jobs:
       contents: write
       pull-requests: write
 
-    env:
-      PR_BRANCH_HIERARCHY_JSON: ${{ inputs.pr-branch-hierarchy-json }}
-
     steps:
-      # STEP 1: Code checkout
       - name: Checkout code
-        id: checkout-code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # STEP 2: Validate pr PR branch hierarchy JSON using jq
-      - name: Validate PR branch hierarchy JSON
-        id: validate-json
+      - name: Setup workflow variables
+        id: setup
         run: |
-          if ! echo "$PR_BRANCH_HIERARCHY_JSON" | jq empty > /dev/null 2>&1; then
-            echo "::error ::PR_BRANCH_HIERARCHY_JSON is not valid JSON"
+          echo "🔍 WORKFLOW DEBUG INFORMATION"
+          echo "=================================="
+          echo "📋 GitHub Context:"
+          echo "  - Repository: $GITHUB_REPOSITORY"
+          echo "  - Current Branch: $GITHUB_REF_NAME"
+          echo "  - Event: $GITHUB_EVENT_NAME"
+          echo "  - Actor: $GITHUB_ACTOR"
+          echo "  - Run ID: $GITHUB_RUN_ID"
+          echo ""
+
+          # Validate JSON and parse in one step
+          echo "🔧 Validating branch hierarchy JSON..."
+          if ! echo '${{ inputs.pr-branch-hierarchy-json }}' | jq empty 2>/dev/null; then
+            echo "::error::Invalid JSON in pr-branch-hierarchy-json"
             exit 1
           fi
+          echo "✅ JSON is valid"
+          echo "📝 Branch Hierarchy: $(echo '${{ inputs.pr-branch-hierarchy-json }}' | jq -c .)"
+          echo ""
 
-      # STEP 3: Determine the target base branch from the allowed hierarchy
-      - name: Parse Branch Hierarchy JSON
-        id: parse-json
-        run: |
+          # Find base branch from hierarchy
+          echo "🔍 Finding target base branch..."
           BASE_BRANCH=""
-          for key in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r 'keys[]'); do
-            for child in $(echo "$PR_BRANCH_HIERARCHY_JSON" | jq -r ".[\"$key\"][]"); do
+          while read -r key; do
+            echo "  Checking parent branch: $key"
+            while read -r child; do
+              echo "    - Allowed child: $child"
               if [[ "$GITHUB_REF_NAME" =~ ^$child$ ]]; then
                 BASE_BRANCH="$key"
-                break
+                echo "✅ Match found! $GITHUB_REF_NAME → $BASE_BRANCH"
+                break 2
               fi
-            done
-          done
+            done < <(echo '${{ inputs.pr-branch-hierarchy-json }}' | jq -r ".[\"$key\"][]")
+          done < <(echo '${{ inputs.pr-branch-hierarchy-json }}' | jq -r 'keys[]')
 
           if [[ -z "$BASE_BRANCH" ]]; then
-            echo "❌ This branch is not allowed to create PRs into any protected branch."
+            echo "::error::Branch $GITHUB_REF_NAME is not allowed to create PRs into any protected branch"
+            echo "Available mappings:"
+            echo '${{ inputs.pr-branch-hierarchy-json }}' | jq -r 'to_entries[] | "  \(.key) ← \(.value | join(", "))"'
             exit 1
           fi
+          echo ""
+
+          # Git repository analysis
+          echo "📊 Git Repository Analysis:"
+          echo "  - Current HEAD: $(git rev-parse HEAD)"
+          echo "  - Current branch: $(git branch --show-current)"
+          echo "  - Total local branches: $(git branch | wc -l)"
+          echo "  - Last commit: $(git log -1 --pretty=format:'%h - %s (%an, %ar)')"
+          echo ""
+
+          # Verify base branch exists
+          echo "🔍 Verifying base branch '$BASE_BRANCH'..."
+          if ! git ls-remote --exit-code --heads origin "$BASE_BRANCH" &>/dev/null; then
+            echo "::error::Base branch '$BASE_BRANCH' does not exist on remote"
+            echo "Available remote branches:"
+            git ls-remote --heads origin | sed 's/.*refs\/heads\//  - /'
+            exit 1
+          fi
+          echo "✅ Base branch exists on remote"
+          echo ""
+
+          # Fetch and analyze commits
+          echo "📥 Fetching latest changes..."
+          git fetch origin "$BASE_BRANCH" --quiet
+          git fetch origin "$GITHUB_REF_NAME" --quiet 2>/dev/null || echo "  (Current branch may not exist on remote yet)"
+
+          echo "📊 Branch Comparison Analysis:"
+          echo "  - Current HEAD: $(git rev-parse HEAD)"
+          echo "  - Base branch (origin/$BASE_BRANCH): $(git rev-parse origin/$BASE_BRANCH)"
+          echo "  - Branches identical: $([[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/$BASE_BRANCH)" ]] && echo 'YES' || echo 'NO')"
+
+          # Count commits in both directions
+          AHEAD=$(git rev-list "origin/$BASE_BRANCH..HEAD" --count)
+          BEHIND=$(git rev-list "HEAD..origin/$BASE_BRANCH" --count)
+
+          echo "  - Commits ahead of base: $AHEAD"
+          echo "  - Commits behind base: $BEHIND"
+
+          # Show commit ranges if they exist
+          if [[ $AHEAD -gt 0 ]]; then
+            echo ""
+            echo "📝 Commits ahead (will be included in PR):"
+            git log "origin/$BASE_BRANCH..HEAD" --pretty=format:"  %h - %s (%an)" --reverse
+          fi
+
+          if [[ $BEHIND -gt 0 ]]; then
+            echo ""
+            echo "⚠️  Commits behind (base has newer commits):"
+            git log "HEAD..origin/$BASE_BRANCH" --pretty=format:"  %h - %s (%an)" | head -5
+            [[ $BEHIND -gt 5 ]] && echo "  ... and $(($BEHIND - 5)) more commits"
+          fi
+
+          # Additional diagnostics for edge cases
+          if [[ $AHEAD -eq 0 && $BEHIND -eq 0 ]]; then
+            echo ""
+            echo "🔄 Branches are identical - checking for force push scenarios..."
+            TOTAL_COMMITS=$(git rev-list HEAD --count)
+            BASE_COMMITS=$(git rev-list "origin/$BASE_BRANCH" --count)
+            echo "  - Total commits in HEAD: $TOTAL_COMMITS"
+            echo "  - Total commits in base: $BASE_COMMITS"
+          fi
+
+          echo ""
+          echo "📤 Workflow Outputs:"
+          echo "  - base_branch: $BASE_BRANCH"
+          echo "  - ahead_count: $AHEAD"
+          echo "  - has_commits: $([[ $AHEAD -gt 0 ]] && echo 'true' || echo 'false')"
+          echo "=================================="
 
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
-
-      # STEP 3.1: Check if base branch exists remotely
-      - name: Ensure base branch exists on remote
-        id: check-if-base-branch-exists
-        run: |
-          git ls-remote --exit-code --heads origin "${{ steps.parse-json.outputs.base_branch }}" || {
-            echo "::error ::Base branch '${{ steps.parse-json.outputs.base_branch }}' does not exist on remote."
-            exit 1
-          }
-
-      # STEP 3.2: check if auto-pr label exists else create
-      - name: Ensure 'auto-pr' label exists
-        id: check-for-auto-pr-label-else-create
-        run: |
-          LABEL_NAME="auto-pr"
-          LABEL_COLOR="34ebba"
-          LABEL_DESCRIPTION="Automatically generated PR"
-
-          # Check if label exists
-          if ! gh label list --json name | jq -e ".[] | select(.name == \"$LABEL_NAME\")" > /dev/null; then
-            echo "Label '$LABEL_NAME' not found. Creating it..."
-            gh label create "$LABEL_NAME" --color "$LABEL_COLOR" --description "$LABEL_DESCRIPTION"
-          else
-            echo "Label '$LABEL_NAME' already exists."
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      # STEP 4: Check if the current branch has new commits ahead of base
-      - name: Check if branch is ahead of base
-        id: check-diff
-        run: |
-          git fetch origin ${{ steps.parse-json.outputs.base_branch }}
-          AHEAD=$(git rev-list origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --count)
           echo "ahead_count=$AHEAD" >> $GITHUB_OUTPUT
+          echo "has_commits=$([[ $AHEAD -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
 
-          echo $GITHUB_OUTPUT
-
-      # STEP 5: Check if an open PR already exists for this branch → base
-      - name: Check for existing PR
-        id: check-pr
+      - name: Ensure auto-pr label exists
+        if: steps.setup.outputs.has_commits == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          PR_JSON=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.parse-json.outputs.base_branch }}" --state open --json number --jq 'if length == 0 then "null" else .[0] end')
-          if [[ "$PR_JSON" != "null" ]]; then
-            PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
-            echo "pr_exists=true" >> $GITHUB_OUTPUT
-            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          else
-            echo "pr_exists=false" >> $GITHUB_OUTPUT
+          gh label list --json name -q '.[] | select(.name == "auto-pr") | .name' | grep -q "auto-pr" || \
+          gh label create "auto-pr" --color "34ebba" --description "Automatically generated PR"
+
+      - name: Check for existing PR
+        if: steps.setup.outputs.has_commits == 'true'
+        id: check-pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --head "$GITHUB_REF_NAME" --base "${{ steps.setup.outputs.base_branch }}" --state open --json number -q '.[0].number // empty')
+          echo "number=${PR_NUMBER:-}" >> $GITHUB_OUTPUT
+          echo "exists=$([[ -n "$PR_NUMBER" ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        if: steps.setup.outputs.has_commits == 'true'
+        id: release-notes
+        run: |
+          echo "📝 GENERATING RELEASE NOTES"
+          echo "=================================="
+          echo "📊 Commit Analysis:"
+
+          declare -A sections=(
+            ["feat"]="### ✨ FEATURES"
+            ["fix"]="### 🐛 FIXES"
+            ["hotfix"]="### 🚑 HOTFIX"
+            ["test"]="### 🧪 TESTS"
+            ["chore"]="### 🔧 CHORES"
+            ["refactor"]="### 🔧 CHORES"
+          )
+
+          declare -A content
+          declare -A count
+
+          # Initialize counters
+          for prefix in feat fix hotfix test chore refactor other; do
+            content["$prefix"]=""
+            count["$prefix"]=0
+          done
+
+          echo "🔍 Processing commits from origin/${{ steps.setup.outputs.base_branch }}..HEAD"
+
+          # Process commits efficiently
+          while IFS='~' read -r msg author || [[ -n $msg || -n $author ]]; do
+            msg=$(echo "$msg" | xargs)
+            author=$(echo "$author" | xargs)
+
+            if [[ -z "$msg" || -z "$author" ]]; then
+              echo "  ⚠️  Skipping empty commit: msg='$msg' author='$author'"
+              continue
+            fi
+
+            echo "  📦 Processing: '$msg' by $author"
+
+            # Extract prefix and categorize
+            if [[ "$msg" =~ ^(feat|fix|hotfix|chore|test|refactor): ]]; then
+              prefix="${BASH_REMATCH[1]}"
+              clean_msg=$(echo "${msg#*: }" | xargs)
+              content["$prefix"]+="- $clean_msg ($author)\n"
+              ((count["$prefix"] += 1))
+              echo "    ✅ Categorized as: $prefix"
+            else
+              content["other"]+="- $msg ($author)\n"
+              ((count["other"] += 1))
+              echo "    📋 Categorized as: other"
+            fi
+          done < <(git log "origin/${{ steps.setup.outputs.base_branch }}..HEAD" --pretty=format:"%s ~ %an")
+
+          echo ""
+          echo "📊 Categorization Summary:"
+          for prefix in feat fix hotfix chore test refactor other; do
+            if [[ ${count["$prefix"]} -gt 0 ]]; then
+              echo "  - $prefix: ${count[$prefix]} commits"
+            fi
+          done
+
+          total_commits=$((${count[feat]} + ${count[fix]} + ${count[hotfix]} + ${count[chore]} + + ${count[test]} + ${count[refactor]} + ${count[other]}))
+          echo "  - Total processed: $total_commits commits"
+          echo ""
+
+          # Build release notes
+          echo "🏗️  Building release notes structure..."
+          notes="## RELEASE NOTES\n\n"
+          sections_added=0
+
+          for prefix in feat fix hotfix chore refactor; do
+            if [[ -n "${content[$prefix]:-}" ]]; then
+              notes+="${sections[$prefix]}\n${content[$prefix]}\n"
+              ((sections_added += 1))
+              echo "  ✅ Added section: $prefix (${count[$prefix]} items)"
+            fi
+          done
+
+          if [[ -n "${content[other]:-}" ]]; then
+            notes+="### 📦 OTHER CHANGES\n${content[other]}\n"
+            ((sections_added += 1))
+            echo "  ✅ Added section: other (${count[other]} items)"
           fi
 
-          echo $GITHUB_OUTPUT
+          # Fallback if no categorized content
+          if [[ $sections_added -eq 0 ]]; then
+            echo "  ⚠️  No categorized content found, using fallback..."
+            notes+="### 📦 CHANGES\n"
+            git log "origin/${{ steps.setup.outputs.base_branch }}..HEAD" --pretty=format:"- %s (%an)" >> /tmp/notes.txt
+            notes+="$(cat /tmp/notes.txt)\n"
+            echo "  ✅ Added fallback section with all commits"
+          fi
 
+          echo ""
+          echo "📄 Final Release Notes Preview:"
+          echo "=================================="
+          echo -e "$notes" | head -20
+          [[ $(echo -e "$notes" | wc -l) -gt 20 ]] && echo "... (truncated, full notes will be in PR)"
+          echo "=================================="
+
+          # Use proper multiline output
+          {
+            echo "content<<NOTES_EOF"
+            echo -e "$notes"
+            echo "NOTES_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create or update PR
+        if: steps.setup.outputs.has_commits == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      # STEP 6: Generate release notes grouped by commit type
-      - name: Generate grouped release notes
-        id: release_notes
-        if: ${{ steps.check-diff.outputs.ahead_count != '0' }}
         run: |
-          git fetch origin ${{ steps.parse-json.outputs.base_branch }}
+          echo "🚀 PR CREATION/UPDATE"
+          echo "=================================="
+          echo "📋 PR Details:"
+          echo "  - Source: $GITHUB_REF_NAME"
+          echo "  - Target: ${{ steps.setup.outputs.base_branch }}"
+          echo "  - Commits: ${{ steps.setup.outputs.ahead_count }}"
+          echo "  - Existing PR: ${{ steps.check-pr.outputs.exists }}"
+          [[ "${{ steps.check-pr.outputs.exists }}" == "true" ]] && echo "  - PR Number: #${{ steps.check-pr.outputs.number }}"
+          echo ""
 
-          FEATURES=""
-          FIXES=""
-          HOTFIX=""
-          CHORES=""
-          OTHERS=""
+          if [[ "${{ steps.check-pr.outputs.exists }}" == "true" ]]; then
+            echo "🔄 Updating existing PR #${{ steps.check-pr.outputs.number }}..."
 
-          while IFS= read -r line; do
-            IFS='~' read -r MSG AUTHOR <<< "$line"
-            MSG=$(echo "$MSG" | xargs | sed 's/^[^a-zA-Z]*//')       # trim leading/trailing spaces
-            AUTHOR=$(echo "$AUTHOR" | xargs) # trim leading/trailing spaces
-            ENTRY="- ${MSG} (${AUTHOR})";
+            # Show current PR details
+            echo "📊 Current PR info:"
+            gh pr view "${{ steps.check-pr.outputs.number }}" --json title,body,labels,state | jq -r '
+              "  - Title: " + .title,
+              "  - State: " + .state,
+              "  - Labels: " + (.labels | map(.name) | join(", ")),
+              "  - Body length: " + (.body | length | tostring) + " chars"
+            '
 
-            # logs
-            echo "line: $line";
-            echo "msg: $MSG";
-            echo "author: $AUTHOR";
-            echo "entry: $ENTRY";
-            echo "-------------------"
+            # Update existing PR
+            gh pr edit "${{ steps.check-pr.outputs.number }}" \
+              --body "${{ steps.release-notes.outputs.content }}"
+            echo "✅ Updated existing PR #${{ steps.check-pr.outputs.number }}"
 
-            [[ "$MSG" == feat:* ]] && FEATURES+="- $(echo "${MSG#feat:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" == fix:* ]] && FIXES+="- $(echo "${MSG#fix:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" == hotfix:* ]] && HOTFIX+="- $(echo "${MSG#hotfix:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" == chore:* ]] && CHORES+="- $(echo "${MSG#chore:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" == refactor:* ]] && CHORES+="- $(echo "${MSG#refactor:}" | xargs) (${AUTHOR})\n"
-            [[ "$MSG" != feat:* && "$MSG" != fix:*  && "$MSG" != hotfix:* && "$MSG" != chore:* && "$MSG" != refactor:* ]] && OTHERS+="- $MSG (${AUTHOR})\n"
-          done < <(git log origin/${{ steps.parse-json.outputs.base_branch }}..HEAD --pretty=format:"%s ~ %an")
+            # Show updated PR URL
+            PR_URL=$(gh pr view "${{ steps.check-pr.outputs.number }}")
+            echo "🔗 PR URL: $PR_URL"
 
-          NOTES="## RELEASE NOTES:\n"
-          [[ -n "$FEATURES" ]] && NOTES+="### ✨ FEATURES\n${FEATURES}\n---\n"
-          [[ -n "$FIXES" ]]    && NOTES+="### 🐛 FIXES\n${FIXES}\n---\n"
-          [[ -n "$HOTFIX" ]]   && NOTES+="### 🚑 HOTFIX\n${HOTFIX}\n---\n"
-          [[ -n "$CHORES" ]]   && NOTES+="### 🔧 CHORES / Refactors\n${CHORES}\n---\n"
-          [[ -n "$OTHERS" ]]   && NOTES+="### 📦 OTHERS\n${OTHERS}\n---\n"
+          else
+            echo "🆕 Creating new PR..."
 
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            # Create new PR and capture the URL
+            PR_URL=$(gh pr create \
+              --base "${{ steps.setup.outputs.base_branch }}" \
+              --head "$GITHUB_REF_NAME" \
+              --title "Auto PR: $GITHUB_REF_NAME → ${{ steps.setup.outputs.base_branch }}" \
+              --body "${{ steps.release-notes.outputs.content }}" \
+              --label "auto-pr")
 
-          echo $GITHUB_OUTPUT
+            echo "✅ Created new PR: $GITHUB_REF_NAME → ${{ steps.setup.outputs.base_branch }}"
+            echo "🔗 PR URL: $PR_URL"
 
-      # STEP 7: Create PR if not already existing
-      - name: Create PR
-        if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'false'
+            # Extract PR number from URL for reference
+            PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]\+')
+          fi
+
+      - name: No changes detected
+        if: steps.setup.outputs.has_commits == 'false'
         run: |
-          gh pr create \
-            --base "${{ steps.parse-json.outputs.base_branch }}" \
-            --head "$GITHUB_REF_NAME" \
-            --title "Auto PR: $GITHUB_REF_NAME → ${{ steps.parse-json.outputs.base_branch }}" \
-            --body "${{ steps.release_notes.outputs.notes }}" \
-            --label "auto-pr"
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          echo "ℹ️  NO CHANGES DETECTED"
+          echo "=================================="
+          echo "📊 Summary:"
+          echo "  - Current branch: $GITHUB_REF_NAME"
+          echo "  - Target branch: ${{ steps.setup.outputs.base_branch }}"
+          echo "  - Commits ahead: ${{ steps.setup.outputs.ahead_count }}"
+          echo "  - Status: No new commits to create PR"
+          echo ""
+          echo "💡 Possible reasons:"
+          echo "  - Branch is up to date with target"
+          echo "  - No new commits since last sync"
+          echo "  - Branch might be behind target (needs rebase/merge)"
+          echo ""
+          echo "🔍 To investigate, check:"
+          echo "  - git log --oneline ${{ steps.setup.outputs.base_branch }}..HEAD"
+          echo "  - git status"
+          echo "  - git log --graph --oneline --all"
+          echo "==================================")
+            echo "📋 PR Number: #$PR_NUMBER"
+          fi
 
-      # STEP 8: Append to existing PR if already open
-      - name: Append to existing PR
-        if: steps.check-diff.outputs.ahead_count != '0' && steps.check-pr.outputs.pr_exists == 'true'
-        run: |
-          PR_NUM=${{ steps.check-pr.outputs.pr_number }}
-          NEW_NOTES="${{ steps.release_notes.outputs.notes }}"
+          echo "=================================="
 
-          gh pr edit "$PR_NUM" --body "$NEW_NOTES"
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: No changes detected
+        if: steps.setup.outputs.has_commits == 'false'
+        run: echo "No commits ahead of ${{ steps.setup.outputs.base_branch }}. Skipping PR creation/update."
