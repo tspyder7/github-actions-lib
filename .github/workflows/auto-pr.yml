@@ -7,10 +7,12 @@ on:
   workflow_call:
     inputs:
       pr-branch-hierarchy-json:
+        description: "JSON object defining allowed source branches for each target branch"
         type: string
         required: true
     secrets:
       GH_TOKEN:
+        description: "GitHub token with contents:write and pull-requests:write permissions"
         required: true
 
 jobs:
