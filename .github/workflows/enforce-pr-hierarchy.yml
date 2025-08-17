@@ -1,109 +1,279 @@
 # Reusable GitHub Actions workflow: Enforce PR Branch Hierarchy
-# Automatically generates PRs with grouped release notes and appends updates
+# Automatically validates and enforces branch hierarchy rules for pull requests
 
 name: Enforce PR Branch Hierarchy
 
 on:
   workflow_call:
-    # Inputs required when calling this workflow
     inputs:
       allowed-branches-hierarchy-json:
+        description: "JSON object defining allowed source branches for each target branch"
         type: string
         required: true
-
-    # Secrets passed to the reusable workflow
+      auto-close-invalid-prs:
+        description: "Whether to automatically close invalid PRs (default: true)"
+        type: boolean
+        required: false
+        default: true
+      comment-template:
+        description: "Custom comment template for invalid PRs"
+        type: string
+        required: false
+        default: ""
     secrets:
       GH_TOKEN:
+        description: "GitHub token with contents:write and pull-requests:write permissions"
         required: true
 
 jobs:
-  call-enforce-pr-hierarchy:
+  enforce-pr-hierarchy:
+    name: Validate and Enforce PR Branch Hierarchy
     runs-on: ubuntu-latest
-    if: github.event.action != 'edited' || github.event.changes.base
+    # Only run on PR events, skip if only edited without base change
+    if: >
+      github.event_name == 'pull_request' &&
+      (github.event.action != 'edited' || github.event.changes.base)
+
     permissions:
       contents: write
       pull-requests: write
 
-    # Environment variable to hold the allowed PR structure (as JSON)
     env:
       ALLOWED_BRANCHES_HIERARCHY_JSON: ${{ inputs.allowed-branches-hierarchy-json }}
+      AUTO_CLOSE_INVALID_PRS: ${{ inputs.auto-close-invalid-prs }}
+      CUSTOM_COMMENT_TEMPLATE: ${{ inputs.comment-template }}
+      DEFAULT_COMMENT_TEMPLATE: |
+        🚫 **PR Automatically Closed - Branch Hierarchy Violation**
+
+        **Issue**: This pull request violates the configured branch hierarchy rules.
+
+        {__DETAILS__}
+
+        **Next Steps**:
+        1. Create your PR from one of the allowed source branches
+        2. Or request an update to the branch hierarchy configuration if this is intentional
+
+        *This action was performed automatically by the branch hierarchy enforcement workflow.*
+
+    outputs:
+      is_valid: ${{ steps.validate-pr-hierarchy.outputs.is_valid }}
+      validation_result: ${{ steps.validate-pr-hierarchy.outputs.validation_result }}
+      invalid_pr_comment: ${{ steps.handle-invalid-pr.outputs.invalid_pr_comment }}
 
     steps:
-      # STEP 1: Validate the JSON format of the allowed branch hierarchy input
-      - name: Validate Allowed PR Hierarchy JSON
-        id: validate-json
+      # STEP 1: Log workflow execution context
+      - name: Log Workflow Context
         run: |
+          echo "::group::🔍 Workflow Execution Context"
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Base Branch: ${{ github.event.pull_request.base.ref }}"
+          echo "Head Branch: ${{ github.event.pull_request.head.ref }}"
+          echo "Allowed Branch Hierarchy JSON: $ALLOWED_BRANCHES_HIERARCHY_JSON"
+          echo "Auto Close Invalid PRs: $AUTO_CLOSE_INVALID_PRS"
+          echo "Custom Comment Template: $CUSTOM_COMMENT_TEMPLATE"
+          echo "::endgroup::"
+
+      # STEP 2: Validate and log the JSON format of allowed branch hierarchy
+      - name: Validate Branch Hierarchy Configuration
+        id: validate-config
+        run: |
+          echo "::group::📋 Validating Configuration"
+          echo "Allowed Branches Hierarchy JSON:"
+          echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq '.'
+
           if ! echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq empty > /dev/null 2>&1; then
-            echo "::error ::ALLOWED_BRANCHES_HIERARCHY_JSON is not valid JSON"
+            echo "::error::❌ ALLOWED_BRANCHES_HIERARCHY_JSON is not valid JSON"
+            echo "::error::Please ensure the input is properly formatted JSON"
             exit 1
           fi
 
-      # STEP 2: Check whether the PR source branch is allowed for the target base branch
+          echo "✅ Configuration JSON is valid"
+
+          # Log the structure for debugging
+          echo "Branch hierarchy rules:"
+          echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq -r 'to_entries[] | "  \(.key) <- [\(.value | join(", "))]"'
+          echo "::endgroup::"
+
+      # STEP 3: Validate PR branch hierarchy with detailed logging
       - name: Validate PR Hierarchy
         id: validate-pr-hierarchy
         run: |
+          echo "::group::🔄 PR Hierarchy Validation"
+
           BASE="${{ github.event.pull_request.base.ref }}"
           HEAD="${{ github.event.pull_request.head.ref }}"
 
-          # Extract allowed branches from the JSON based on the base branch
-          ALLOWED=$(echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq -r ".[\"$BASE\"][]?" || true)
+          echo "🎯 Target Branch: $BASE"
+          echo "🌿 Source Branch: $HEAD"
 
-          # If there's no restriction, mark PR as valid
-          if [ -z "$ALLOWED" ]; then
+          # Extract allowed branches from the JSON based on the base branch
+          echo "📜 Checking allowed patterns for base branch '$BASE'..."
+          ALLOWED_PATTERNS=$(echo "$ALLOWED_BRANCHES_HIERARCHY_JSON" | jq -r ".[\"$BASE\"][]?" 2>/dev/null || echo "")
+
+          # If there's no restriction for this base branch
+          if [ -z "$ALLOWED_PATTERNS" ]; then
+            echo "ℹ️  No restrictions found for base branch '$BASE' - allowing PR"
             echo "is_valid=true" >> "$GITHUB_OUTPUT"
+            echo "validation_result=No restrictions configured for base branch" >> "$GITHUB_OUTPUT"
+            echo "::endgroup::"
             exit 0
           fi
 
-          # Check if it matches the pattern
+          echo "📋 Allowed patterns for '$BASE':"
+          for pattern in $ALLOWED_PATTERNS; do
+            echo "  - $pattern"
+          done
+
+          # Check if head branch matches any allowed pattern
           MATCHED=false
-          for branch_pattern in $ALLOWED; do
-            if [[ "$HEAD" =~ ^$branch_pattern$ ]]; then
+          MATCHED_PATTERN=""
+
+          echo "🔍 Testing source branch '$HEAD' against patterns..."
+          for pattern in $ALLOWED_PATTERNS; do
+            echo "  Testing pattern: '$pattern'"
+            if [[ "$HEAD" =~ ^${pattern}$ ]]; then
+              echo "  ✅ Match found!"
               MATCHED=true
+              MATCHED_PATTERN="$pattern"
               break
+            else
+              echo "  ❌ No match"
             fi
           done
 
-          # If the head branch is in the allowed list, it's valid
+          # Set outputs based on validation result
           if [ "$MATCHED" = true ]; then
+            echo "✅ PR hierarchy validation PASSED"
+            echo "   Source: $HEAD"
+            echo "   Target: $BASE"
+            echo "   Matched Pattern: $MATCHED_PATTERN"
             echo "is_valid=true" >> "$GITHUB_OUTPUT"
+            echo "validation_result=Valid - matches pattern: $MATCHED_PATTERN" >> "$GITHUB_OUTPUT"
           else
-            # Otherwise, mark as invalid and export data for next step
+            echo "❌ PR hierarchy validation FAILED"
+            echo "   Source: $HEAD"
+            echo "   Target: $BASE"
+            echo "   Allowed patterns: $(echo $ALLOWED_PATTERNS | tr ' ' ',')"
             echo "is_valid=false" >> "$GITHUB_OUTPUT"
-            echo "allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
+            echo "validation_result=Invalid - source branch does not match any allowed patterns" >> "$GITHUB_OUTPUT"
+
+            # Export data for potential closure step
+            {
+              echo "allowed_patterns<<EOF"
+              echo "$ALLOWED_PATTERNS"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
             echo "base=$BASE" >> "$GITHUB_OUTPUT"
             echo "head=$HEAD" >> "$GITHUB_OUTPUT"
           fi
+          echo "::endgroup::"
 
-      # STEP 3: Automatically comment and close PR if the hierarchy is invalid
-      - name: Comment and close PR if invalid
-        if: ${{ steps.validate-pr-hierarchy.outputs.is_valid == 'false' }}
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      # STEP 4: Handle invalid PRs with detailed logging
+      - name: Handle Invalid PR
+        id: handle-invalid-pr
+        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false' && env.AUTO_CLOSE_INVALID_PRS == 'true'
         run: |
+          echo "::group::🚫 Handling Invalid PR"
+
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
-
           BASE="${{ steps.validate-pr-hierarchy.outputs.base }}"
           HEAD="${{ steps.validate-pr-hierarchy.outputs.head }}"
-          ALLOWED="${{ steps.validate-pr-hierarchy.outputs.allowed }}"
+          ALLOWED_PATTERNS="${{ steps.validate-pr-hierarchy.outputs.allowed_patterns }}"
 
-          COMMENT="❌ This pull request was automatically closed.
-          **Reason**: PRs to \`$BASE\` must come from one of the following branches:-
-          \`$ALLOWED\`
-          Current source: \`$HEAD\`."
+          echo "PR Details:"
+          echo "  Number: $PR_NUMBER"
+          echo "  Repository: $REPO"
+          echo "  Source: $HEAD"
+          echo "  Target: $BASE"
+          echo "  Auto-close enabled: $AUTO_CLOSE_INVALID_PRS"
 
-          JSON_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
+          # Create comment content
 
-          # Post a comment on the PR explaining why it is closed
-          curl -s -X POST \
-            -H "Authorization: token $GH_TOKEN" \
+          FORMATTED_PATTERNS=$(echo "$ALLOWED_PATTERNS" | sed 's/^/- `/' | sed 's/$/`/')
+          # Build DETAILS block as a single string
+          DETAILS="**Details**:\n"
+          DETAILS+="- **Target Branch**: \`$BASE\`\n"
+          DETAILS+="- **Source Branch**: \`$HEAD\`\n"
+          DETAILS+="- **Allowed Source Patterns**:\n$FORMATTED_PATTERNS"
+
+          # Determine which template to use
+          if [ -n "$CUSTOM_COMMENT_TEMPLATE" ]; then
+            echo "📝 Using custom comment template"
+            TEMPLATE="$CUSTOM_COMMENT_TEMPLATE"
+          else
+            echo "📝 Using default comment template from job env"
+            TEMPLATE="$DEFAULT_COMMENT_TEMPLATE"
+          fi
+
+          # Inject DETAILS into template
+          if [[ "$TEMPLATE" == *"{__DETAILS__}"* ]]; then
+            COMMENT="${TEMPLATE//\{__DETAILS__\}/$DETAILS}"
+          else
+            COMMENT="$TEMPLATE\n\n$DETAILS"
+          fi
+
+          echo "invalid_pr_comment=$COMMENT" >> "$GITHUB_OUTPUT"
+
+          # Prepare JSON payload for comment
+          COMMENT_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
+
+          echo "💬 Adding comment to PR #$PR_NUMBER"
+          COMMENT_RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+            -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments \
-            -d "$JSON_PAYLOAD"
+            -H "User-Agent: GitHub-Actions-PR-Hierarchy-Enforcer" \
+            "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" \
+            -d "$COMMENT_PAYLOAD")
 
-          # Close the PR using GitHub's API
-          curl -s -X PATCH \
-            -H "Authorization: token $GH_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/$REPO/pulls/$PR_NUMBER \
-            -d '{"state":"closed"}'
+          COMMENT_HTTP_CODE="${COMMENT_RESPONSE: -3}"
+          if [ "$COMMENT_HTTP_CODE" -ge 200 ] && [ "$COMMENT_HTTP_CODE" -lt 300 ]; then
+            echo "✅ Comment added successfully (HTTP $COMMENT_HTTP_CODE)"
+          else
+            echo "::error::❌ Failed to add comment (HTTP $COMMENT_HTTP_CODE)"
+            echo "::error::Response: ${COMMENT_RESPONSE%???}"
+          fi
+
+          # Close PR if auto-close is enabled
+          if [ "$AUTO_CLOSE_INVALID_PRS" = "true" ]; then
+            echo "🔒 Closing PR #$PR_NUMBER"
+            CLOSE_RESPONSE=$(curl -s -w "%{http_code}" -X PATCH \
+              -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "User-Agent: GitHub-Actions-PR-Hierarchy-Enforcer" \
+              "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER" \
+              -d '{"state":"closed"}')
+
+            CLOSE_HTTP_CODE="${CLOSE_RESPONSE: -3}"
+            if [ "$CLOSE_HTTP_CODE" -ge 200 ] && [ "$CLOSE_HTTP_CODE" -lt 300 ]; then
+              echo "✅ PR closed successfully (HTTP $CLOSE_HTTP_CODE)"
+            else
+              echo "::error::❌ Failed to close PR (HTTP $CLOSE_HTTP_CODE)"
+              echo "::error::Response: ${CLOSE_RESPONSE%???}"
+              exit 1
+            fi
+          else
+            echo "ℹ️  Auto-close disabled - PR remains open with comment"
+          fi
+
+          echo "::endgroup::"
+
+      # STEP 5: Log final workflow result
+      - name: Log Workflow Result
+        if: always()
+        run: |
+          echo "::group::📊 Workflow Summary"
+          echo "Validation Result: ${{ steps.validate-pr-hierarchy.outputs.validation_result }}"
+          if [ "${{ steps.validate-pr-hierarchy.outputs.is_valid }}" = "true" ]; then
+            echo "✅ PR hierarchy validation PASSED - no action required"
+          else
+            if [ "$AUTO_CLOSE_INVALID_PRS" = "true" ]; then
+              echo "❌ PR hierarchy validation FAILED - PR commented and closed"
+            else
+              echo "❌ PR hierarchy validation FAILED - PR commented but left open"
+            fi
+          fi
+          echo "::endgroup::"
