@@ -27,6 +27,18 @@ This reusable GitHub Actions workflow automatically creates or updates pull requ
 
 To use this workflow, call it from another workflow using `workflow_call`.
 
+### 🧾 Workflow Inputs
+
+| Name                          | Type     | Required | Default   | Description                                                                 |
+|-------------------------------|----------|----------|-----------|-----------------------------------------------------------------------------|
+| pr-branch-hierarchy-json | string | Yes   | —         | JSON object defining allowed source branches for each target branch        |
+
+### 🔐 Workflow Secrets
+
+| Name                        | Required | Default   | Description                                                                 |
+|-----------------------------|----------|-----------|-----------------------------------------------------------------------------|
+| GH_TOKEN                    | Yes   | —         | GitHub token with `contents:write` and `pull-requests:write` permissions   |
+
 ### Example Caller Workflow
 
 ```yaml
