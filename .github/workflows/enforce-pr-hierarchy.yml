@@ -58,7 +58,7 @@ jobs:
     outputs:
       is_valid: ${{ steps.validate-pr-hierarchy.outputs.is_valid }}
       validation_result: ${{ steps.validate-pr-hierarchy.outputs.validation_result }}
-      invalid_pr_comment: ${{ steps.handle-invalid-pr.outputs.invalid_pr_comment }}
+      invalid_pr_comment: ${{ steps.comment-if-invalid.outputs.invalid_pr_comment }}
 
     steps:
       # STEP 1: Log workflow execution context
@@ -172,11 +172,11 @@ jobs:
           echo "::endgroup::"
 
       # STEP 4: Handle invalid PRs with detailed logging
-      - name: Handle Invalid PR
-        id: handle-invalid-pr
-        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false' && env.AUTO_CLOSE_INVALID_PRS == 'true'
+      - name: Add Comment If Invalid
+        id: comment-if-invalid
+        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false'
         run: |
-          echo "::group::🚫 Handling Invalid PR"
+          echo "::group::🚫 Add Comment If Invalid"
 
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
@@ -198,7 +198,7 @@ jobs:
           DETAILS="**Details**:<br>"
           DETAILS+="- **Target Branch**: \`$BASE\`<br>"
           DETAILS+="- **Source Branch**: \`$HEAD\`<br>"
-          DETAILS+="- **Allowed Source Patterns**: $FORMATTED_PATTERNS"
+          DETAILS+="- **Allowed Source Patterns**:<br>$FORMATTED_PATTERNS"
 
           # Determine which template to use
           if [ -n "$CUSTOM_COMMENT_TEMPLATE" ]; then
@@ -244,6 +244,25 @@ jobs:
             echo "::error::Response: ${COMMENT_RESPONSE%???}"
           fi
 
+          echo "::endgroup::"
+
+      - name: Close PR If Invalid
+        id: close-invalid-pr
+        if: env.AUTO_CLOSE_INVALID_PRS == 'true'
+        run: |
+          echo "::group::🚫 Add Comment If Invalid"
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          BASE="${{ steps.validate-pr-hierarchy.outputs.base }}"
+          HEAD="${{ steps.validate-pr-hierarchy.outputs.head }}"
+
+          echo "Close PR:"
+          echo "  Number: $PR_NUMBER"
+          echo "  Repository: $REPO"
+          echo "  Source: $HEAD"
+          echo "  Target: $BASE"
+
           # Close PR if auto-close is enabled
           if [ "$AUTO_CLOSE_INVALID_PRS" = "true" ]; then
             echo "🔒 Closing PR #$PR_NUMBER"
@@ -274,6 +293,7 @@ jobs:
         run: |
           echo "::group::📊 Workflow Summary"
           echo "Validation Result: ${{ steps.validate-pr-hierarchy.outputs.validation_result }}"
+
           if [ "${{ steps.validate-pr-hierarchy.outputs.is_valid }}" = "true" ]; then
             echo "✅ PR hierarchy validation PASSED - no action required"
           else
@@ -281,6 +301,7 @@ jobs:
               echo "❌ PR hierarchy validation FAILED - PR commented and closed"
             else
               echo "❌ PR hierarchy validation FAILED - PR commented but left open"
+              exit 1
             fi
           fi
           echo "::endgroup::"
