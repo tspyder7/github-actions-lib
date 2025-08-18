@@ -213,7 +213,7 @@ jobs:
           if [[ "$TEMPLATE" == *"{__DETAILS__}"* ]]; then
             COMMENT="${TEMPLATE//\{__DETAILS__\}/$DETAILS}"
           else
-            COMMENT="$TEMPLATE\n\n$DETAILS"
+            COMMENT="$TEMPLATE"
           fi
 
           echo -e "  Invalid PR Comment:\n$COMMENT"
