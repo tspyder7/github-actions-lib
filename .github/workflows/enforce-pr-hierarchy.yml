@@ -216,7 +216,12 @@ jobs:
             COMMENT="$TEMPLATE\n\n$DETAILS"
           fi
 
-          echo "invalid_pr_comment=$COMMENT" >> "$GITHUB_OUTPUT"
+          # Export invalid pr comment
+          {
+            echo "invalid_pr_comment<<EOF"
+            echo "$COMMENT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
           # Prepare JSON payload for comment
           COMMENT_PAYLOAD=$(jq -n --arg body "$COMMENT" '{ body: $body }')
