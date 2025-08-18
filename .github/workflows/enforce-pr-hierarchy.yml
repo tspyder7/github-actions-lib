@@ -156,7 +156,7 @@ jobs:
             echo "❌ PR hierarchy validation FAILED"
             echo "   Source: $HEAD"
             echo "   Target: $BASE"
-            echo "   Allowed patterns: $(echo $ALLOWED_PATTERNS | tr ' ' ',')"
+            echo "   Allowed patterns: $(echo $ALLOWED_PATTERNS | sed 's/\([^ ]*\)/`\1`/g' | sed 's/ /,/g')"
             echo "is_valid=false" >> "$GITHUB_OUTPUT"
             echo "validation_result=Invalid - source branch does not match any allowed patterns" >> "$GITHUB_OUTPUT"
 
@@ -193,12 +193,12 @@ jobs:
 
           # Create comment content
 
-          FORMATTED_PATTERNS=$(echo "$ALLOWED_PATTERNS" | sed 's/^/- `/' | sed 's/$/`/')
+          FORMATTED_PATTERNS=$(echo $ALLOWED_PATTERNS | sed 's/\([^ ]*\)/`\1`/g' | sed 's/ /,/g')
           # Build DETAILS block as a single string
           DETAILS="**Details**:<br>"
           DETAILS+="- **Target Branch**: \`$BASE\`<br>"
           DETAILS+="- **Source Branch**: \`$HEAD\`<br>"
-          DETAILS+="- **Allowed Source Patterns**:<br>$FORMATTED_PATTERNS"
+          DETAILS+="- **Allowed Source Patterns**: $FORMATTED_PATTERNS"
 
           # Determine which template to use
           if [ -n "$CUSTOM_COMMENT_TEMPLATE" ]; then
