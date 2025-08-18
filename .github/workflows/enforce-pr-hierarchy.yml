@@ -195,10 +195,10 @@ jobs:
 
           FORMATTED_PATTERNS=$(echo "$ALLOWED_PATTERNS" | sed 's/^/- `/' | sed 's/$/`/')
           # Build DETAILS block as a single string
-          DETAILS="**Details**:\n"
-          DETAILS+="- **Target Branch**: \`$BASE\`\n"
-          DETAILS+="- **Source Branch**: \`$HEAD\`\n"
-          DETAILS+="- **Allowed Source Patterns**:\n$FORMATTED_PATTERNS"
+          DETAILS="**Details**:<br>"
+          DETAILS+="- **Target Branch**: \`$BASE\`<br>"
+          DETAILS+="- **Source Branch**: \`$HEAD\`<br>"
+          DETAILS+="- **Allowed Source Patterns**: $FORMATTED_PATTERNS"
 
           # Determine which template to use
           if [ -n "$CUSTOM_COMMENT_TEMPLATE" ]; then
@@ -215,6 +215,8 @@ jobs:
           else
             COMMENT="$TEMPLATE\n\n$DETAILS"
           fi
+
+          echo -e "  Invalid PR Comment:\n$COMMENT"
 
           # Export invalid pr comment
           {
