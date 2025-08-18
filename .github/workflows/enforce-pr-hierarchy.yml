@@ -248,7 +248,7 @@ jobs:
 
       - name: Close PR If Invalid
         id: close-invalid-pr
-        if: env.AUTO_CLOSE_INVALID_PRS == 'true'
+        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false' && env.AUTO_CLOSE_INVALID_PRS == 'true'
         run: |
           echo "::group::🚫 Add Comment If Invalid"
 
