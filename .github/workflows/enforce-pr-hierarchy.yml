@@ -59,8 +59,23 @@ jobs:
       is_valid: ${{ steps.validate-pr-hierarchy.outputs.is_valid }}
       validation_result: ${{ steps.validate-pr-hierarchy.outputs.validation_result }}
       invalid_pr_comment: ${{ steps.comment-if-invalid.outputs.invalid_pr_comment }}
+      skip_steps: ${{ steps.skip-steps.outputs.skip_steps }}
 
     steps:
+      # STEP 0: Decide whether to run all steps based on github event and event action or branch change
+      - name: Decide If Steps Can Be Skipped
+        id: skip-steps
+        run: |
+          echo "::group::📎Decide If Steps Can Be Skipped"
+
+          if [ "${{ github.event.action }}" = "edited" ] && [ -z "${{ github.event.changes.base }}" ]; then
+            echo "skip_steps=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_steps=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "::endgroup::"
+
       # STEP 1: Log workflow execution context
       - name: Log Workflow Context
         run: |
@@ -74,11 +89,13 @@ jobs:
           echo "Allowed Branch Hierarchy JSON: $ALLOWED_BRANCHES_HIERARCHY_JSON"
           echo "Auto Close Invalid PRs: $AUTO_CLOSE_INVALID_PRS"
           echo "Custom Comment Template: $CUSTOM_COMMENT_TEMPLATE"
+          echo "Skip Rest Steps: ${{ steps.skip-steps.outputs.skip_steps }}"
           echo "::endgroup::"
 
       # STEP 2: Validate and log the JSON format of allowed branch hierarchy
       - name: Validate Branch Hierarchy Configuration
         id: validate-config
+        if: steps.skip-steps.outputs.skip_steps == 'false'
         run: |
           echo "::group::📋 Validating Configuration"
           echo "Allowed Branches Hierarchy JSON:"
@@ -100,6 +117,7 @@ jobs:
       # STEP 3: Validate PR branch hierarchy with detailed logging
       - name: Validate PR Hierarchy
         id: validate-pr-hierarchy
+        if: steps.skip-steps.outputs.skip_steps == 'false'
         run: |
           echo "::group::🔄 PR Hierarchy Validation"
 
@@ -174,7 +192,7 @@ jobs:
       # STEP 4: Handle invalid PRs with detailed logging
       - name: Add Comment If Invalid
         id: comment-if-invalid
-        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false'
+        if: steps.skip-steps.outputs.skip_steps == 'false' && steps.validate-pr-hierarchy.outputs.is_valid == 'false'
         run: |
           echo "::group::🚫 Add Comment If Invalid"
 
@@ -248,7 +266,10 @@ jobs:
 
       - name: Close PR If Invalid
         id: close-invalid-pr
-        if: steps.validate-pr-hierarchy.outputs.is_valid == 'false' && env.AUTO_CLOSE_INVALID_PRS == 'true'
+        if: |
+          steps.skip-steps.outputs.skip_steps == 'false' &&
+          steps.validate-pr-hierarchy.outputs.is_valid == 'false' &&
+          env.AUTO_CLOSE_INVALID_PRS == 'true'
         run: |
           echo "::group::🚫 Add Comment If Invalid"
 
