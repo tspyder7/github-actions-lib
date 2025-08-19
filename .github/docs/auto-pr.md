@@ -27,6 +27,9 @@ This reusable GitHub Actions workflow automatically creates or updates pull requ
 
 To use this workflow, call it from another workflow using `workflow_call`.
 
+> ⏳ **Workflow Timeout:** Each job in this workflow is configured with a maximum runtime of **10 minutes**.
+> If a job exceeds this limit, GitHub Actions will automatically cancel it.
+
 ### 🧾 Workflow Inputs
 
 | Name                          | Type     | Required | Default   | Description                                                                 |

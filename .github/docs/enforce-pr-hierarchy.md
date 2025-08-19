@@ -18,6 +18,9 @@ This reusable GitHub Actions workflow enforces branch hierarchy rules for pull r
 
 - To configure close comment template pass `comment-template`
 
+> ⏳ **Workflow Timeout:** Each job in this workflow is configured with a maximum runtime of **10 minutes**.
+> If a job exceeds this limit, GitHub Actions will automatically cancel it.
+
 ### 📄 Default Template
 ```
 🚫 **PR Automatically Closed - Branch Hierarchy Violation**
