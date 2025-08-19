@@ -10,6 +10,13 @@ on:
         description: "JSON object defining allowed source branches for each target branch"
         type: string
         required: true
+
+      timeout_minutes:
+        type: number
+        required: false
+        default: 10
+        description: Custom Timeout in Minutes
+
     secrets:
       GH_TOKEN:
         description: "GitHub token with contents:write and pull-requests:write permissions"
@@ -24,7 +31,7 @@ jobs:
       contents: write
       pull-requests: write
 
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.timeout_minutes }}
 
     steps:
       - name: Checkout code

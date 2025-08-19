@@ -10,16 +10,25 @@ on:
         description: "JSON object defining allowed source branches for each target branch"
         type: string
         required: true
+
       auto-close-invalid-prs:
         description: "Whether to automatically close invalid PRs (default: true)"
         type: boolean
         required: false
         default: true
+
       comment-template:
         description: "Custom comment template for invalid PRs"
         type: string
         required: false
         default: ""
+
+      timeout_minutes:
+        type: number
+        required: false
+        default: 10
+        description: Custom Timeout in Minutes
+
     secrets:
       GH_TOKEN:
         description: "GitHub token with contents:write and pull-requests:write permissions"
@@ -34,7 +43,7 @@ jobs:
       contents: write
       pull-requests: write
 
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.timeout_minutes }}
 
     env:
       ALLOWED_BRANCHES_HIERARCHY_JSON: ${{ inputs.allowed-branches-hierarchy-json }}

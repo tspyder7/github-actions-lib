@@ -46,6 +46,7 @@ This reusable GitHub Actions workflow enforces branch hierarchy rules for pull r
 | allowed-branches-hierarchy-json | string | Yes   | —         | JSON object defining allowed source branches for each target branch        |
 | auto-close-invalid-prs      | boolean| No    | true    | Whether to automatically close invalid PRs                                 |
 | comment-template            | string | No    | [Default Template](#-default-template)       | Custom comment template for invalid PRs                                    |
+| timeout_minutes | number | No   | 10         | Custom Timeout in Minutes        |
 
 ### 🔐 Workflow Secrets
 
@@ -81,8 +82,8 @@ jobs:
                 "development"
             ]
         }
-      auto-close-invalid-prs: true
-      comment-template: |
+      auto-close-invalid-prs: true # Optional, Default - true
+      comment-template: |   # Optional
         🚫 **PR Automatically Closed - Branch Hierarchy Violation**
 
         **Issue**: This pull request violates the configured branch hierarchy rules.
@@ -94,4 +95,5 @@ jobs:
         2. Or request an update to the branch hierarchy configuration if this is intentional
 
         *This action was performed automatically by the branch hierarchy enforcement workflow.*
+      timeout_minutes: 5 # Optional, Default - 10
 ```
