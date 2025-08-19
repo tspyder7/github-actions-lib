@@ -17,6 +17,7 @@ on:
 
 jobs:
   auto-pr:
+    name: Generate PR Automatically
     runs-on: ubuntu-latest
     permissions:
       contents: write
