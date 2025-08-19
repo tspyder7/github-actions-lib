@@ -19,9 +19,12 @@ jobs:
   auto-pr:
     name: Generate PR Automatically
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
       pull-requests: write
+
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
