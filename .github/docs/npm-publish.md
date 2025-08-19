@@ -44,7 +44,7 @@ on:
 
 jobs:
   publish-package:
-    uses: tspyder7/github-action-lib/.github/workflows/npm-publish.yml@main
+    uses: tspyder7/github-actions-lib/.github/workflows/npm-publish.yml@main
     with:
       node-version: "22" # Optional, Default - 22
       registry-url: "https://registry.npmjs.org/" # Optional, Default - https://registry.npmjs.org/
