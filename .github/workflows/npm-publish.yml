@@ -11,25 +11,30 @@ on:
         type: string
         default: "22"
         required: false
+        description: Node.js version to use for setup and publishing
 
       # NPM registry URL to publish to
       registry-url:
         type: string
         default: https://registry.npmjs.org/
         required: false
+        description: The npm registry URL where the package will be published
 
       # The package manager to use (must be pnpm, yarn, or npm)
       package-manager:
         type: string
         required: true
+        description: Package manager to use (pnpm, yarn, or npm) for installing and build
 
     secrets:
       # NPM token used for authentication during publish
       NPM_TOKEN:
         required: true
+        description: NPM authentication token used to publish the package
 
 jobs:
   publish:
+    name: NPM Publish
     runs-on: ubuntu-latest
 
     # Define environment variables for use in shell scripts and expressions

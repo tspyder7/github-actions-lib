@@ -17,6 +17,21 @@ This reusable workflow automates publishing your package to the NPM registry usi
 
 To use this workflow in your repository, define a workflow file that calls it using `workflow_call`.
 
+### 🧾 Workflow Inputs
+
+| Name            | Type   | Required | Default                        | Description                                                                 |
+|-----------------|--------|----------|--------------------------------|-----------------------------------------------------------------------------|
+| node-version    | string | No       | 22                             | Node.js version to use for setup and publishing |
+| registry-url    | string | No       | https://registry.npmjs.org/    | NPM registry URL where the package will be published |
+| package-manager | string | Yes      | —                              | Package manager to use (pnpm, yarn, or npm) for installing and build |
+
+### 🔐 Workflow Secrets
+
+| Name      | Required | Default | Description                                                |
+|-----------|----------|---------|------------------------------------------------------------|
+| NPM_TOKEN | Yes      | —       | NPM authentication token used to publish the package           |
+
+
 ### Example Caller Workflow
 
 ```yaml
