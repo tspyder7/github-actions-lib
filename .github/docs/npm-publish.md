@@ -24,6 +24,7 @@ To use this workflow in your repository, define a workflow file that calls it us
 | node-version    | string | No       | 22                             | Node.js version to use for setup and publishing |
 | registry-url    | string | No       | https://registry.npmjs.org/    | NPM registry URL where the package will be published |
 | package-manager | string | Yes      | —                              | Package manager to use (pnpm, yarn, or npm) for installing and build |
+| timeout_minutes | number | No   | 10         | Custom Timeout in Minutes        |
 
 ### 🔐 Workflow Secrets
 
@@ -45,8 +46,9 @@ jobs:
   publish-package:
     uses: tspyder7/github-action-lib/.github/workflows/npm-publish.yml@main
     with:
-      node-version: "20"
-      registry-url: "https://registry.npmjs.org/"
+      node-version: "22" # Optional, Default - 22
+      registry-url: "https://registry.npmjs.org/" # Optional, Default - https://registry.npmjs.org/
       package-manager: "pnpm"
+      timeout_minutes: 20 # Optional, Default - 10
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

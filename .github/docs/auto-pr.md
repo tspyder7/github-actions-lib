@@ -35,6 +35,7 @@ To use this workflow, call it from another workflow using `workflow_call`.
 | Name                          | Type     | Required | Default   | Description                                                                 |
 |-------------------------------|----------|----------|-----------|-----------------------------------------------------------------------------|
 | pr-branch-hierarchy-json | string | Yes   | —         | JSON object defining allowed source branches for each target branch        |
+| timeout_minutes | number | No   | 10         | Custom Timeout in Minutes        |
 
 ### 🔐 Workflow Secrets
 
@@ -74,6 +75,7 @@ jobs:
                 "development"
             ]
         }
+      timeout_minutes: 5 # Optional, Default - 10
     secrets:
       GH_TOKEN: ${{ secrets.GH_REPO_TOKEN  }}
 ```
