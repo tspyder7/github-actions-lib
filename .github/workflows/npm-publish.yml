@@ -23,6 +23,12 @@ on:
         required: true
         description: Package manager to use (pnpm, yarn, or npm) for installing and build
 
+      publish-tag:
+        type: string
+        required: false
+        default: "latest"
+        description: Tag the npm package
+
       timeout_minutes:
         type: number
         required: false
@@ -63,6 +69,7 @@ jobs:
           echo "  - Node Version: $NODE_VERSION"
           echo "  - Package Manager: $PACKAGE_MANAGER"
           echo "  - Registry URL: $REGISTRY_URL"
+          echo "  - Publish Tag: ${{ inputs.publish-tag }}"
           echo "  - Timeout: ${{ inputs.timeout_minutes }} minutes"
 
       # STEP 1: Validate the package manager input
@@ -221,10 +228,12 @@ jobs:
           # Log package details before publishing
           PACKAGE_NAME=$(cat package.json | jq -r '.name')
           PACKAGE_VERSION=$(cat package.json | jq -r '.version')
+          TAG=${{ inputs.publish-tag }}
           echo "📦 Package Details:"
           echo "  - Name: $PACKAGE_NAME"
           echo "  - Version: $PACKAGE_VERSION"
           echo "  - Registry: $REGISTRY_URL"
+          echo "  - Tag: $TAG"
 
           # Check if package already exists
           echo "🔍 Checking if package version already exists..."
@@ -238,13 +247,11 @@ jobs:
           fi
 
           echo "⏳ Publishing package..."
-          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
-            pnpm publish --access public --no-git-checks
-          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
-            yarn publish --access public --non-interactive
-          else
-            npm publish --access public
-          fi
+          case "$PACKAGE_MANAGER" in
+            pnpm) pnpm publish --access public --no-git-checks --tag "$TAG" ;;
+            yarn) yarn publish --access public --non-interactive --tag "$TAG" ;;
+            *)    npm publish --access public --tag "$TAG" ;;
+          esac
           echo "🎉 Package published successfully!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -254,9 +261,11 @@ jobs:
         run: |
           PACKAGE_NAME=$(cat package.json | jq -r '.name')
           PACKAGE_VERSION=$(cat package.json | jq -r '.version')
+          TAG=${{ inputs.publish-tag }}
           echo "🎉 Publish Summary:"
           echo "  - Package: $PACKAGE_NAME"
           echo "  - Version: $PACKAGE_VERSION"
+          echo "  - Tag: $TAG"
           echo "  - Registry: $REGISTRY_URL"
           echo "  - Published by: ${{ github.actor }}"
           echo "  - Commit: ${{ github.sha }}"
