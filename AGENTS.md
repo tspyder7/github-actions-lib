@@ -4,10 +4,17 @@ This file provides guidance for agentic coding agents working in this repository
 
 ## Repository Overview
 
-This repository contains **reusable GitHub Actions workflows**:
+This repository contains **reusable GitHub Actions** and **workflows** for internal organization use.
+
+> **Note:** These are not published to the GitHub Marketplace. Use relative paths for actions and `workflow_call` for workflows.
+
+### Actions (use via relative path: `.github/actions/<name>`)
+- `npm-publish` - Publish packages to NPM with npm/yarn/pnpm support
+
+### Workflows (use via `workflow_call`)
 - `auto-pr.yml` - Automatically creates/updates PRs based on branch hierarchy
 - `enforce-pr-hierarchy.yml` - Validates and enforces PR branch hierarchy rules
-- `npm-publish.yml` - Publishes packages to NPM registry
+- `npm-publish.yml` - Publish packages to NPM registry
 
 ## Build/Lint/Test Commands
 
@@ -18,10 +25,11 @@ This is a YAML-only repository with no build scripts or automated tests.
 pip install yamllint
 
 # Validate all YAML files
-yamllint .github/workflows/
+yamllint .github/
 
 # Validate a specific file
 yamllint .github/workflows/auto-pr.yml
+yamllint .github/actions/npm-publish/action.yml
 ```
 
 ### VS Code Integration
@@ -147,9 +155,15 @@ Example: `feat: add npm-publish workflow for automated package publishing`
 
 ## Documentation Standards
 
+### Workflows
 Each workflow should have corresponding docs in `.github/docs/`:
 - Filename: `{workflow-name}.md`
 - Include: Features, usage, inputs, secrets, example caller workflows
+
+### Actions
+Each action should have a README.md in the action directory:
+- Filename: `README.md`
+- Include: Features, usage, inputs, outputs, examples
 
 ## Security Considerations
 
@@ -163,15 +177,43 @@ Each workflow should have corresponding docs in `.github/docs/`:
 
 ```
 .github/
-├── workflows/           # Reusable workflow definitions
+├── actions/            # Reusable actions (composite)
+│   └── npm-publish/
+│       ├── action.yml
+│       └── README.md
+├── workflows/         # Reusable workflow definitions
 │   ├── auto-pr.yml
 │   ├── enforce-pr-hierarchy.yml
 │   └── npm-publish.yml
-├── docs/               # Workflow documentation
+├── docs/              # Workflow documentation
 │   ├── auto-pr.md
 │   ├── enforce-pr-hierarchy.md
 │   └── npm-publish.md
 └── PULL_REQUEST_TEMPLATE.md
+```
+
+### Action Structure
+
+Each action should follow this pattern:
+```yaml
+name: Action Name
+description: Brief description
+inputs:
+  input-name:
+    description: "Description"
+    required: false
+    default: "default-value"
+outputs:
+  output-name:
+    description: "Output description"
+    value: ${{ steps.step-id.outputs.value }}
+runs:
+  using: composite
+  steps:
+    - name: Step name
+      shell: bash
+      run: |
+        # commands
 ```
 
 ## PR Checklist
