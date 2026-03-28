@@ -1,0 +1,253 @@
+# Github Action: npm-publish
+
+name: "npm-publish"
+description: "Action to publish npm packages"
+
+inputs:
+  node-version:
+    description: Node.js version to use for setup and publishing
+    required: false
+    default: "22"
+
+  registry-url:
+    description: The npm registry URL where the package will be published
+    required: false
+    default: https://registry.npmjs.org/
+
+  package-manager:
+    description: Package manager to use (pnpm, yarn, or npm)
+    required: true
+
+  publish-tag:
+    description: Tag the npm package
+    required: false
+    default: "latest"
+
+  work-dir:
+    description: Directory where commands should run
+    required: false
+    default: "."
+
+  registry-token:
+    description: NPM authentication token used to publish the package
+    required: true
+
+outputs:
+  package-name:
+    description: "Name of the published package"
+    value: ${{ steps.publish-info.outputs.package-name }}
+
+  package-version:
+    description: "Version of the published package"
+    value: ${{ steps.publish-info.outputs.package-version }}
+
+  published-url:
+    description: "URL to the package on npmjs.com"
+    value: ${{ steps.publish-info.outputs.published-url }}
+
+runs:
+  using: "composite"
+  steps:
+    # STEP 0: Log Details
+    - name: Log Details
+      shell: bash
+      run: |
+        echo "📋 Details:"
+        echo "  - Trigger: $GITHUB_EVENT_NAME"
+        echo "  - Reference: $GITHUB_REF"
+        echo "  - SHA: $GITHUB_SHA"
+        echo "  - Repository: $GITHUB_REPOSITORY"
+        echo "  - Actor: $GITHUB_ACTOR"
+        echo "  - Run ID: $GITHUB_RUN_ID"
+        echo "⚙️ Configuration:"
+        echo "  - Node Version: ${{ inputs.node-version }}"
+        echo "  - Package Manager: ${{ inputs.package-manager }}"
+        echo "  - Registry URL: ${{ inputs.registry-url }}"
+        echo "  - Publish Tag: ${{ inputs.publish-tag }}"
+        echo "📁 Working Directory: ${{ inputs.work-dir }}"
+
+    # STEP 1: Validate package manager
+    - name: Validate package manager
+      shell: bash
+      run: |
+        PACKAGE_MANAGER="${{ inputs.package-manager }}"
+        echo "🔍 Validating package manager: $PACKAGE_MANAGER"
+        case "$PACKAGE_MANAGER" in
+          pnpm|yarn|npm)
+            echo "✅ Valid package manager: $PACKAGE_MANAGER"
+            ;;
+          *)
+            echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, npm"
+            exit 1
+            ;;
+        esac
+
+    # STEP 2: Checkout
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # STEP 3: Setup Node
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: Log Node.js setup
+      shell: bash
+      run: |
+        echo "⚡ Node.js setup completed"
+        echo "  - Node version: $(node --version)"
+        echo "  - NPM version: $(npm --version)"
+        echo "  - NPM registry: $(npm config get registry)"
+        echo "  - Working directory: $(pwd)"
+
+    # STEP 4a: Install pnpm
+    - name: Install pnpm
+      if: ${{ inputs.package-manager == 'pnpm' }}
+      shell: bash
+      run: |
+        echo "📦 Installing pnpm globally..."
+        npm install -g pnpm
+        echo "✅ pnpm installed successfully"
+
+    - name: Log pnpm version
+      if: ${{ inputs.package-manager == 'pnpm' }}
+      shell: bash
+      run: |
+        echo "📦 pnpm setup completed"
+        echo "  - pnpm version: $(pnpm --version)"
+        echo "  - pnpm store location: $(pnpm store path)"
+
+    # STEP 4b: Install yarn
+    - name: Install yarn
+      if: ${{ inputs.package-manager == 'yarn' }}
+      shell: bash
+      run: |
+        echo "🧶 Installing yarn globally..."
+        npm install -g yarn
+        echo "✅ yarn installed successfully"
+
+    - name: Log yarn version
+      if: ${{ inputs.package-manager == 'yarn' }}
+      shell: bash
+      run: |
+        echo "🧶 yarn setup completed"
+        echo "  - yarn version: $(yarn --version)"
+        echo "  - yarn cache directory: $(yarn cache dir)"
+
+    # STEP 5: Install dependencies
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.work-dir }}
+      run: |
+        PACKAGE_MANAGER="${{ inputs.package-manager }}"
+        echo "📥 Installing project dependencies with $PACKAGE_MANAGER..."
+
+        if [ -f package.json ]; then
+          cat package.json | jq -r '.name + " v" + .version'
+          echo "Dependencies count: $(cat package.json | jq -r '.dependencies | keys | length')"
+          echo "DevDependencies count: $(cat package.json | jq -r '.devDependencies | keys | length')"
+        else
+          echo "❌ No package.json found!"
+          exit 1
+        fi
+
+        if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
+          pnpm install
+        elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
+          yarn install
+        else
+          npm install
+        fi
+
+    - name: Log dependency installation results
+      shell: bash
+      run: |
+        PACKAGE_MANAGER="${{ inputs.package-manager }}"
+        echo "📊 Dependency installation summary:"
+        echo "  - node_modules size: $(du -sh node_modules 2>/dev/null || echo 'Not found')"
+
+        if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
+          pnpm ls --depth=0 || true
+        elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
+          yarn list --depth=0 || true
+        else
+          npm ls --depth=0 || true
+        fi
+
+    # STEP 6: Build
+    - name: Build project
+      shell: bash
+      working-directory: ${{ inputs.work-dir }}
+      run: |
+        PACKAGE_MANAGER="${{ inputs.package-manager }}"
+
+        if cat package.json | jq -e '.scripts.build' > /dev/null; then
+          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
+            pnpm run build
+          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
+            yarn build
+          else
+            npm run build
+          fi
+        else
+          echo "⚠️ No build script found, skipping"
+        fi
+
+    - name: Log build results
+      shell: bash
+      run: |
+        ls -la
+        for dir in dist build lib out public; do
+          if [ -d "$dir" ]; then
+            du -sh $dir
+          fi
+        done
+
+    # STEP 7: Publish
+    - name: Publish to NPM
+      id: publish
+      shell: bash
+      working-directory: ${{ inputs.work-dir }}
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.registry-token }}
+      run: |
+        PACKAGE_MANAGER="${{ inputs.package-manager }}"
+        REGISTRY_URL="${{ inputs.registry-url }}"
+        TAG="${{ inputs.publish-tag }}"
+
+        PACKAGE_NAME=$(cat package.json | jq -r '.name')
+        PACKAGE_VERSION=$(cat package.json | jq -r '.version')
+
+        echo "📦 $PACKAGE_NAME@$PACKAGE_VERSION"
+
+        if [[ "$PACKAGE_MANAGER" == "npm" ]]; then
+          npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version 2>/dev/null || true
+        fi
+
+        case "$PACKAGE_MANAGER" in
+          pnpm) pnpm publish --access public --no-git-checks --tag "$TAG" ;;
+          yarn) yarn publish --access public --non-interactive --tag "$TAG" ;;
+          *)    npm publish --access public --tag "$TAG" ;;
+        esac
+
+    - name: Set publish outputs
+      id: publish-info
+      if: success()
+      shell: bash
+      working-directory: ${{ inputs.work-dir }}
+      run: |
+        PACKAGE_NAME=$(cat package.json | jq -r '.name')
+        PACKAGE_VERSION=$(cat package.json | jq -r '.version')
+        echo "package-name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "package-version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
+        echo "published-url=https://www.npmjs.com/package/${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "🎉 Published: ${PACKAGE_NAME}@${PACKAGE_VERSION}"
+
+    - name: Log failure details
+      if: failure()
+      shell: bash
+      run: |
+        echo "❌ Workflow failed!"
+        ls -la || true
