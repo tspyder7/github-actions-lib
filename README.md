@@ -1,37 +1,23 @@
-# 🧩 github-action-lib: Reusable GitHub Actions Workflows
+# 🧩 github-action-lib: Reusable GitHub Actions
 
-This repository contains a collection of **reusable GitHub Actions workflows** designed to automate common development tasks across multiple repositories, including:
+This repository contains **reusable GitHub Actions** and **workflows** for internal organization use.
 
-- 🔁 Auto-generating pull requests from development branches
-- 🚦 Enforcing pull request branch hierarchy rules
-- 🚀 Publishing packages to NPM
-
-Each workflow is modular, reusable via `workflow_call`, and configurable via inputs and secrets.
+> **Note:** Not published to GitHub Marketplace. Use relative paths for actions and `workflow_call` for workflows.
 
 ---
 
-## 📁 Available Reusable Workflows
+## Actions
 
-### 1. [`auto-pr.yml`](.github/workflows/auto-pr.yml)
-
-**Automatically creates or updates pull requests** based on a configurable branch hierarchy. It also groups and appends release notes based on commit message types (e.g., `feat`, `fix`, `chore`).
-
-🔗 [View README](.github/docs/auto-pr.md) (or inline the full usage guide in the same file)
+| Action | Description | Documentation |
+|--------|-------------|---------------|
+| [`npm-publish`](.github/actions/npm-publish/) | Publish packages to NPM with npm/yarn/pnpm support | [README](.github/actions/npm-publish/README.md) |
 
 ---
 
-### 2. [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml)
+## Workflows
 
-**Validates pull request source and target branches** against an allowed hierarchy. If a PR is opened from an unauthorized branch, it automatically comments and closes it.
-
-🔗 [View README](.github/docs/enforce-pr-hierarchy.md)
-
----
-
-### 3. [`npm-publish.yml`](.github/workflows/npm-publish.yml)
-
-**Publishes your package to the NPM registry** using your preferred package manager (`npm`, `yarn`, or `pnpm`). It supports automatic build and dependency installation before publishing.
-
-🔗 [View README](.github/docs/npm-publish.md)
-
----
+| Workflow | Description | Documentation |
+|----------|-------------|---------------|
+| [`auto-pr.yml`](.github/workflows/auto-pr.yml) | Auto-generate PRs from branch hierarchy | [README](.github/docs/auto-pr.md) |
+| [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml) | Enforce PR branch hierarchy rules | [README](.github/docs/enforce-pr-hierarchy.md) |
+| [`npm-publish.yml`](.github/workflows/npm-publish.yml) | Publish packages to NPM registry | [README](.github/docs/npm-publish.md) |
