@@ -1,0 +1,153 @@
+# Reusable Github Action Workflow: Creates release and publishes the package
+
+name: release-pipeline
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        description: "Github environment. Eg. dev, staging, production, etc"
+      release-type:
+        type: string
+        description: "Any of release type: rc, alpha, beta, latest"
+        required: false
+        default: latest
+      publish:
+        description: "Publish action to publish package to the registry"
+        type: string
+        required: false
+
+      timeout_minutes:
+        type: number
+        default: 10
+        required: false
+
+jobs:
+  setup-pipeline:
+    name: Setup Pipeline
+    runs-on: ubuntu-latest
+    outputs:
+      generate_release: ${{ steps.evaluate-workflow-trigger.generate_release }}
+      publish_package: ${{ steps.evaluate-workflow-trigger.publish_package }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    steps:
+      - name: Evaluate workflow triggers
+        id: evaluate-workflow-trigger
+        run: |
+          echo "generate_release=false" >> $GITHUB_OUTPUT
+          echo "publish_package=false" >> $GITHUB_OUTPUT
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger: only run release
+            echo "generate_release=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            commits_json='${{ toJson(github.event.commits) }}'
+            commits_count=$(echo "$commits_json" | jq 'length')
+            echo "🔍 Commit count: $commits_count"
+            if [ "$commits_count" -eq 1 ]; then
+              msg=$(echo "$commits_json" | jq -r '.[0].message')
+              echo "🔍 Commit message: $msg"
+              if [[ "$msg" =~ ^release\(.* ]]; then
+                echo "generate_release=true" >> $GITHUB_OUTPUT
+                echo "publish_package=true" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
+
+  release-generator:
+    name: Release Generator
+    runs-on: ubuntu-latest
+    needs: [setup-pipeline]
+    if: needs.setup-pipeline.outputs.generate_release == 'true'
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || ''}}
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    steps:
+      - name: Log Workflow Context
+        run: |
+          echo "::group::🔍 Workflow Execution Context"
+          echo "Event: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref Name: ${{ github.ref_name }}"
+          echo "::endgroup::"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine Release Type
+        id: release-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ inputs.release_type }}" >> $GITHUB_OUTPUT
+          else
+            # Extract release type from first commit message
+            commit_msg=$(git log --reverse --format=%s | head -n1)
+            echo "Commit message: $commit_msg"
+            type=$(echo "$commit_msg" | sed -n 's/^release(\(.*\)):.*$/\1/p')
+            echo "type=$type" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set Release Please Config Paths
+        id: release-please
+        run: |
+          type="${{ steps.release-type.outputs.type }}"
+          echo "release_please_config=.release/$type/release-please-config.json" >> $GITHUB_OUTPUT
+          echo "release_please_manifest=.release/$type/release-please-manifest.json" >> $GITHUB_OUTPUT
+
+      - name: Validate Config and Manifest
+        run: |
+          config="${{ steps.release-please.outputs.release_please_config }}"
+          manifest="${{ steps.release-please.outputs.release_please_manifest }}"
+          echo "Checking files: $C and $manifest"
+          if [ ! -f "$config" ] || [ ! -f "$manifest" ]; then
+            echo "::error::Required release-please files not found."
+            echo "       ::Manifest File: $manifest"
+            echo "       ::Config File: $config"
+            exit 1
+          fi
+
+  publish:
+    name: Publish
+    needs: [setup-pipeline, release-generator]
+    if: needs.setup-pipeline.outputs.publish_package == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    steps:
+      - name: Generate Publish Action
+        run: |
+          echo "TODO: will generate custom action at runtime to resolve publish package"
+
+  summary:
+    name: Summary
+    needs: [setup-pipeline, release-generator, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add workflow summary and logs
+        run: |
+          run_release="${{ needs.validate-trigger-conditions.outputs.run_release }}"
+          run_publish="${{ needs.validate-trigger-conditions.outputs.run_publish }}"
+
+          echo "::group::📋 Workflow Summary"
+          if [ "$run_release" != "true" ]; then
+            echo "🚫 Workflow skipped"
+            echo "### 🚫 Workflow skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "$run_release" = "true" ] && [ "$run_publish" != "true" ]; then
+            echo "✅ Release job ran, publish skipped"
+            {
+              echo "### ✅ Release job ran"
+              echo "- Publish job skipped"
+            } >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Release and publish jobs ran"
+            {
+              echo "### ✅ Release and publish jobs ran"
+              echo "- Both release and publish completed successfully"
+            } >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "::endgroup::"
