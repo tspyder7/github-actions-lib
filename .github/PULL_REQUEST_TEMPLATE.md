@@ -22,8 +22,7 @@ Select all that apply:
 
 ## Related to Issue
 
-Link to any related issue(s):
-Closes/Relates to: #<issue-number>
+Link to any related issue(s): Closes/Relates to: #<issue-number>
 
 ---
 

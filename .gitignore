@@ -1,12 +1,32 @@
-# Workflow generated content (if any)
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+.github/actions/*/dist/
+
+# Environment files
+.env
+.env.*
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Workflow generated content
 .cache/
 temp/
 tmp/
-
-# Ignore workflows that are generated or copied
-# (optional - adjust if your repo uses code generation for workflows)
 generated-workflows/
 
-# GitHub Actions workflow logs (local or simulated)
+# GitHub Actions workflow logs
 .github/workflows/*.log
 .github/workflows/*.bak

@@ -1,0 +1,39 @@
+{
+    "name": "github-actions-lib",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Reusable GitHub Actions and workflows",
+    "packageManager": "pnpm@10.9.0",
+    "scripts": {
+        "build": "node esbuild.config.mjs",
+        "build:watch": "node esbuild.config.mjs --watch",
+        "lint": "eslint src/ --ext .ts,.js",
+        "lint:fix": "eslint src/ --ext .ts,.js --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "markdownlint": "markdownlint '**/*.md' --config markdownlint.json --ignore 'node_modules/' --ignore '.git/' --ignore 'dist/' --ignore '.opencode/' --ignore 'AGENTS.md' --ignore 'README.md'",
+        "ci": "pnpm run lint && pnpm run format:check && pnpm run markdownlint",
+        "prepare": "husky"
+    },
+    "dependencies": {
+        "esbuild": "^0.24.0",
+        "typescript": "^5.7.0"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.0.0",
+        "@commitlint/config-conventional": "^19.0.0",
+        "@eslint/js": "^9.0.0",
+        "@types/node": "^22.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.0.0",
+        "@typescript-eslint/parser": "^8.0.0",
+        "eslint": "^9.0.0",
+        "husky": "^9.0.0",
+        "markdownlint-cli": "^0.41.0",
+        "prettier": "^3.3.0"
+    },
+    "engines": {
+        "node": ">=20.0.0",
+        "pnpm": ">=9.0.0"
+    }
+}
