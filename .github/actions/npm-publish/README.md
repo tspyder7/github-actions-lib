@@ -2,8 +2,6 @@
 
 A GitHub Action to publish your package to the NPM registry with support for npm, yarn, and pnpm package managers.
 
-> **Note:** Not published to GitHub Marketplace. Use `workflow_call` for workflows and `uses:` with repo path for actions.
-
 ---
 
 ## Features
