@@ -1,32 +1,35 @@
-# Dependencies
+# IGNORE EXCEPTION:
+!.github/actions/*/dist/
+
+# IGNORE:
+## Dependencies
 node_modules/
 .pnpm-store/
 
-# Build output
+## Build output
 dist/
-.github/actions/*/dist/
 
-# Environment files
+## Environment files
 .env
 .env.*
 *.log
 
-# Editor/IDE
+## Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
+## OS
 .DS_Store
 Thumbs.db
 
-# Workflow generated content
+## Workflow generated content
 .cache/
 temp/
 tmp/
 generated-workflows/
 
-# GitHub Actions workflow logs
+## GitHub Actions workflow logs
 .github/workflows/*.log
 .github/workflows/*.bak

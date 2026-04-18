@@ -1,0 +1,17 @@
+name: action-generator
+description: Generates dynamic actions
+
+inputs:
+  action-type:
+    description: Type of action
+    required: true
+  uses:
+    description: Custom action which needs to called with action runs
+    required: true
+  with:
+    description: Input to custom action
+    required: false
+
+runs:
+  using: node24
+  main: dist/script.js

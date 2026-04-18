@@ -14,7 +14,7 @@ const actionDirs = readdirSync(srcDir, { withFileTypes: true })
 
 const builds = actionDirs
     .map((actionName) => {
-        const entryPoint = join(srcDir, actionName, 'index.ts');
+        const entryPoint = join(srcDir, actionName, 'script.ts');
         const outputDir = join(outDirBase, actionName, 'dist');
         const outfile = join(outputDir, 'script.js');
 
@@ -30,8 +30,8 @@ const builds = actionDirs
             platform: 'node',
             target: 'node20',
             format: 'esm',
-            minify: process.env.NODE_ENV === 'production',
-            sourcemap: process.env.NODE_ENV !== 'production',
+            minify: true,
+            sourcemap: true,
             logLevel: 'info',
             metafile: true,
         };
@@ -44,18 +44,26 @@ if (!builds.length) {
 }
 
 if (watch) {
-    const ctx = await esbuild.context(builds);
-    await ctx.watch();
-    console.info('Watching for changes...');
+    await Promise.all(
+        builds.map(async (build) => {
+            const ctx = await esbuild.context(builds);
+            await ctx.watch();
+            console.info('Watching for changes...');
+        }),
+    );
 } else {
-    const result = await esbuild.build(builds);
+    await Promise.all(
+        builds.map(async (build) => {
+            const result = await esbuild.build(build);
 
-    if (result.metafile) {
-        const outputs = Object.keys(result.metafile.outputs);
-        outputs.forEach((output) => {
-            const size = result.metafile.outputs[output].bytes;
-            const sizeKB = (size / 1024).toFixed(2);
-            console.info(`${output}: ${sizeKB} KB`);
-        });
-    }
+            if (result.metafile) {
+                const outputs = Object.keys(result.metafile.outputs);
+                outputs.forEach((output) => {
+                    const size = result.metafile.outputs[output].bytes;
+                    const sizeKB = (size / 1024).toFixed(2);
+                    console.info(`${output}: ${sizeKB} KB`);
+                });
+            }
+        }),
+    );
 }
