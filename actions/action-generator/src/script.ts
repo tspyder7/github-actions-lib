@@ -4,7 +4,7 @@ import { generateAction } from './generate-action';
 import { dirname } from 'path';
 
 const main = () => {
-    const actionType = core.getInput('actionType', { required: true });
+    const actionType = core.getInput('action-type', { required: true });
     const action = generateAction();
     const actionPath = `.github/actions/${actionType}/action.yml`;
     mkdirSync(dirname(actionPath), { recursive: true });
