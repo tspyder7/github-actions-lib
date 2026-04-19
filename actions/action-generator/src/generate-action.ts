@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import { ActionTemplate } from './constants';
 import { exit } from 'process';
 import { parse, stringify } from 'yaml';
-import { parseJson } from '../../utils';
+import { parseJson } from '@shared/utils';
 
 export const generateAction = (): string => {
     const actionType = core.getInput('actionType', { required: true });

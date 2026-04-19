@@ -32,4 +32,4 @@ generated-workflows/
 .github/workflows/*.bak
 
 # IGNORE EXCEPTION:
-!.github/actions/*/dist/
+!actions/**/dist/

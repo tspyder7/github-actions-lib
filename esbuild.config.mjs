@@ -5,8 +5,7 @@ import { readdirSync, existsSync } from 'fs';
 const args = process.argv.slice(2);
 const watch = args.includes('--watch');
 
-const srcDir = resolve('src/actions');
-const outDirBase = resolve('.github/actions');
+const srcDir = resolve('actions');
 
 const actionDirs = readdirSync(srcDir, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
@@ -14,8 +13,8 @@ const actionDirs = readdirSync(srcDir, { withFileTypes: true })
 
 const builds = actionDirs
     .map((actionName) => {
-        const entryPoint = join(srcDir, actionName, 'script.ts');
-        const outputDir = join(outDirBase, actionName, 'dist');
+        const entryPoint = join(srcDir, actionName, 'src', 'script.ts');
+        const outputDir = join(srcDir, actionName, 'dist');
         const outfile = join(outputDir, 'script.cjs');
 
         if (!existsSync(entryPoint)) {

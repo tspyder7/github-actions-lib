@@ -25885,7 +25885,7 @@ var require_dist = __commonJS({
   }
 });
 
-// src/actions/action-generator/script.ts
+// actions/action-generator/src/script.ts
 var import_fs2 = require("fs");
 
 // node_modules/.pnpm/@actions+core@3.0.0/node_modules/@actions/core/lib/command.js
@@ -26283,7 +26283,7 @@ function getInput(name, options) {
   return val.trim();
 }
 
-// src/actions/action-generator/templates/publish.ts
+// actions/action-generator/src/templates/publish.ts
 var publish_default = `name: publish
 
 runs:
@@ -26315,16 +26315,16 @@ runs:
         echo "=============================="
 `;
 
-// src/actions/action-generator/constants.ts
+// actions/action-generator/src/constants.ts
 var ActionTemplate = {
   publish: publish_default
 };
 
-// src/actions/action-generator/generate-action.ts
+// actions/action-generator/src/generate-action.ts
 var import_process = require("process");
 var import_yaml = __toESM(require_dist(), 1);
 
-// src/utils/index.ts
+// shared/utils/index.ts
 var parseJson = (jsonStr) => {
   try {
     return JSON.parse(jsonStr);
@@ -26334,7 +26334,7 @@ var parseJson = (jsonStr) => {
   }
 };
 
-// src/actions/action-generator/generate-action.ts
+// actions/action-generator/src/generate-action.ts
 var generateAction = () => {
   const actionType = getInput("actionType", { required: true });
   const uses = getInput("uses", { required: true });
@@ -26356,7 +26356,7 @@ var generateAction = () => {
   return (0, import_yaml.stringify)(action);
 };
 
-// src/actions/action-generator/script.ts
+// actions/action-generator/src/script.ts
 var import_path = require("path");
 var main = () => {
   const actionType = getInput("actionType", { required: true });
