@@ -14,4 +14,4 @@ inputs:
 
 runs:
   using: node24
-  main: dist/script.js
+  main: dist/script.cjs

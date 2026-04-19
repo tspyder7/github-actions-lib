@@ -16,7 +16,7 @@ const builds = actionDirs
     .map((actionName) => {
         const entryPoint = join(srcDir, actionName, 'script.ts');
         const outputDir = join(outDirBase, actionName, 'dist');
-        const outfile = join(outputDir, 'script.js');
+        const outfile = join(outputDir, 'script.cjs');
 
         if (!existsSync(entryPoint)) {
             console.warn(`Skipping ${actionName}: no index.ts found`);

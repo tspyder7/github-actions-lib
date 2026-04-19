@@ -26358,4 +26358,4 @@ undici/lib/web/fetch/body.js:
 undici/lib/web/websocket/frame.js:
   (*! ws. MIT License. Einar Otto Stangvik <einaros@gmail.com> *)
 */
-//# sourceMappingURL=script.js.map
+//# sourceMappingURL=script.cjs.map
