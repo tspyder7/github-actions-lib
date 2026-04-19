@@ -1,6 +1,3 @@
-# IGNORE EXCEPTION:
-!.github/actions/*/dist/
-
 # IGNORE:
 ## Dependencies
 node_modules/
@@ -33,3 +30,6 @@ generated-workflows/
 ## GitHub Actions workflow logs
 .github/workflows/*.log
 .github/workflows/*.bak
+
+# IGNORE EXCEPTION:
+!.github/actions/*/dist/
