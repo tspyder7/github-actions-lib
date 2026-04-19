@@ -4,7 +4,14 @@ import tsparser from '@typescript-eslint/parser';
 
 export default [
     {
-        ignores: ['dist/**', 'node_modules/**', '*.js', '*.mjs', '*.cjs'],
+        ignores: [
+            'dist/**',
+            'node_modules/**',
+            '*.js',
+            '*.mjs',
+            '*.cjs',
+            '.github/actions/**/dist/**',
+        ],
     },
     {
         files: ['src/**/*.{ts,js}'],
