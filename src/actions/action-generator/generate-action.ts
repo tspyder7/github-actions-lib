@@ -24,7 +24,9 @@ export const generateAction = (): string => {
     }
 
     step.uses = uses;
-    withInput && Object.keys(withInput).length > 0 ? (step.with = withInput) : delete step.with;
+    withInput && Object.keys(withInput).length > 0
+        ? (step.with = JSON.parse(withInput))
+        : delete step.with;
 
     return stringify(action);
 };
