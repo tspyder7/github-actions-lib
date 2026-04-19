@@ -26344,11 +26344,12 @@ var generateAction = () => {
 };
 
 // src/actions/action-generator/script.ts
+var import_path = require("path");
 var main = () => {
   const actionType = getInput("actionType", { required: true });
   const action = generateAction();
   const actionPath = `.github/actions/${actionType}/action.yml`;
-  (0, import_fs2.mkdirSync)(actionPath, { recursive: true });
+  (0, import_fs2.mkdirSync)((0, import_path.dirname)(actionPath), { recursive: true });
   (0, import_fs2.writeFileSync)(actionPath, action);
 };
 main();
