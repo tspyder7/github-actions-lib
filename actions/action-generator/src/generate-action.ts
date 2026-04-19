@@ -5,7 +5,7 @@ import { parse, stringify } from 'yaml';
 import { parseJson } from '@shared/utils';
 
 export const generateAction = (): string => {
-    const actionType = core.getInput('actionType', { required: true });
+    const actionType = core.getInput('action-type', { required: true });
     const uses = core.getInput('uses', { required: true });
     const withInput = core.getInput('with');
 
