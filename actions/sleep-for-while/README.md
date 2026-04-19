@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sleep for 5 seconds
-        uses: tspyder7/github-actions-lib/.github/actions/sleep-for-while@main
+        uses: tspyder7/github-actions-lib/actions/sleep-for-while@main
 ```
 
 ### With Custom Configuration
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sleep with message
-        uses: tspyder7/github-actions-lib/.github/actions/sleep-for-while@main
+        uses: tspyder7/github-actions-lib/actions/sleep-for-while@main
         with:
           sleep_time: 10
           message: "Done waiting!"
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sleep for 15 seconds
-        uses: tspyder7/github-actions-lib/.github/actions/sleep-for-while@main
+        uses: tspyder7/github-actions-lib/actions/sleep-for-while@main
         with:
           sleep_time: 15
           message: "Finished waiting for 15 seconds!"

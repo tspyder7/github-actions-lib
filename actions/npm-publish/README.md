@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish to NPM
-        uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+        uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
           registry-token: ${{ secrets.NPM_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish with pnpm
-        uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+        uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org/"
@@ -63,7 +63,7 @@ jobs:
 
       - name: Publish to NPM
         id: publish
-        uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+        uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
           registry-token: ${{ secrets.NPM_TOKEN }}
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish from subdirectory
-        uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+        uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
           work-dir: packages/my-package
@@ -142,7 +142,7 @@ jobs:
         run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
 
       - name: Publish to NPM
-        uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+        uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
           registry-token: ${{ secrets.NPM_TOKEN }}
@@ -153,7 +153,7 @@ jobs:
 
 ```yaml
 - name: Publish with Yarn
-  uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+  uses: tspyder7/github-actions-lib/actions/npm-publish@main
   with:
     package-manager: yarn
     registry-token: ${{ secrets.NPM_TOKEN }}
@@ -163,7 +163,7 @@ jobs:
 
 ```yaml
 - name: Publish with pnpm
-  uses: tspyder7/github-actions-lib/.github/actions/npm-publish@main
+  uses: tspyder7/github-actions-lib/actions/npm-publish@main
   with:
     package-manager: pnpm
     registry-token: ${{ secrets.NPM_TOKEN }}
