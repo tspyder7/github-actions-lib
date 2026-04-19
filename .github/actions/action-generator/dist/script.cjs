@@ -26347,7 +26347,9 @@ var generateAction = () => {
 var main = () => {
   const actionType = getInput("actionType", { required: true });
   const action = generateAction();
-  (0, import_fs2.writeFileSync)(`.github/actions/${actionType}/action.yml`, action);
+  const actionPath = `.github/actions/${actionType}/action.yml`;
+  (0, import_fs2.mkdirSync)(actionPath, { recursive: true });
+  (0, import_fs2.writeFileSync)(actionPath, action);
 };
 main();
 /*! Bundled license information:
