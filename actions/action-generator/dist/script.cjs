@@ -26336,7 +26336,7 @@ var parseJson = (jsonStr) => {
 
 // actions/action-generator/src/generate-action.ts
 var generateAction = () => {
-  const actionType = getInput("actionType", { required: true });
+  const actionType = getInput("action-type", { required: true });
   const uses = getInput("uses", { required: true });
   const withInput = getInput("with");
   const template = ActionTemplate[actionType];
@@ -26359,7 +26359,7 @@ var generateAction = () => {
 // actions/action-generator/src/script.ts
 var import_path = require("path");
 var main = () => {
-  const actionType = getInput("actionType", { required: true });
+  const actionType = getInput("action-type", { required: true });
   const action = generateAction();
   const actionPath = `.github/actions/${actionType}/action.yml`;
   (0, import_fs2.mkdirSync)((0, import_path.dirname)(actionPath), { recursive: true });
