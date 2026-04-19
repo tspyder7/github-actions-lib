@@ -59,7 +59,7 @@ This action does not produce outputs.
 
 ## Examples
 
-### Complete CI/CD Pipeline
+### CI/CD Pipeline
 
 ```yaml
 name: Sleep Demo

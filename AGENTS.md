@@ -10,9 +10,11 @@ use.
 > **Note:** These are not published to the GitHub Marketplace. Use relative paths for actions and
 > `workflow_call` for workflows.
 
-### Actions (use via relative path: `.github/actions/<name>`)
+### Actions (use via relative path: `actions/<name>`)
 
+- `action-generator` - Generates composite actions (supports: publish)
 - `npm-publish` - Publish packages to NPM with npm/yarn/pnpm support
+- `sleep-for-while` - Sleeps for given seconds and optionally prints a message
 
 ### Workflows (use via `workflow_call`)
 
@@ -189,20 +191,28 @@ Each action should have a README.md in the action directory:
 ## File Organization
 
 ```
-.github/
-├── actions/            # Reusable actions (composite)
-│   └── npm-publish/
-│       ├── action.yml
-│       └── README.md
-├── workflows/         # Reusable workflow definitions
-│   ├── auto-pr.yml
-│   ├── enforce-pr-hierarchy.yml
-│   └── npm-publish.yml
-├── docs/              # Workflow documentation
-│   ├── auto-pr.md
-│   ├── enforce-pr-hierarchy.md
-│   └── npm-publish.md
+actions/                         # Reusable actions (composite)
+└── <action-name>/
+    ├── action.yml               # Required: action definition
+    ├── README.md               # Required: documentation
+    ├── dist/                  # Optional: compiled output (node24)
+    │   └── script.cjs
+    └── src/                   # Optional: source files (node24)
+        ├── script.ts
+        ├── *.ts
+        └── templates/
+            └── *.ts
+
+.github/                        # GitHub workflows and docs
+├── workflows/
+│   ├── *.yml
+├── docs/
+│   └── *.md
 └── PULL_REQUEST_TEMPLATE.md
+
+shared/                         # Optional: shared utilities
+└── utils/
+    └── *.ts
 ```
 
 ### Action Structure

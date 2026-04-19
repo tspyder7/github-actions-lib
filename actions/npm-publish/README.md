@@ -118,7 +118,7 @@ jobs:
 
 ## Examples
 
-### Complete CI/CD Pipeline
+### CI/CD Pipeline
 
 ```yaml
 name: Publish Package
