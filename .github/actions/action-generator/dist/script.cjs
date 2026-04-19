@@ -26323,6 +26323,18 @@ var ActionTemplate = {
 // src/actions/action-generator/generate-action.ts
 var import_process = require("process");
 var import_yaml = __toESM(require_dist(), 1);
+
+// src/utils/index.ts
+var parseJson = (jsonStr) => {
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error("JSONParseError: ", e.message);
+    return null;
+  }
+};
+
+// src/actions/action-generator/generate-action.ts
 var generateAction = () => {
   const actionType = getInput("actionType", { required: true });
   const uses = getInput("uses", { required: true });
@@ -26334,12 +26346,13 @@ var generateAction = () => {
   }
   const action = (0, import_yaml.parse)(template);
   const step = action.runs.steps[1];
+  const inputJson = parseJson(withInput);
   if (!step) {
     console.error("Unable to find placeholder for step to call custom action");
     (0, import_process.exit)(1);
   }
   step.uses = uses;
-  withInput && Object.keys(withInput).length > 0 ? step.with = withInput : delete step.with;
+  inputJson && Object.keys(inputJson).length > 0 ? step.with = inputJson : delete step.with;
   return (0, import_yaml.stringify)(action);
 };
 

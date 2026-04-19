@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import { ActionTemplate } from './constants';
 import { exit } from 'process';
 import { parse, stringify } from 'yaml';
+import { parseJson } from '../../utils';
 
 export const generateAction = (): string => {
     const actionType = core.getInput('actionType', { required: true });
@@ -17,6 +18,7 @@ export const generateAction = (): string => {
 
     const action = parse(template);
     const step = action.runs.steps[1];
+    const inputJson = parseJson(withInput);
 
     if (!step) {
         console.error('Unable to find placeholder for step to call custom action');
@@ -24,9 +26,7 @@ export const generateAction = (): string => {
     }
 
     step.uses = uses;
-    withInput && Object.keys(withInput).length > 0
-        ? (step.with = JSON.parse(withInput))
-        : delete step.with;
+    inputJson && Object.keys(inputJson).length > 0 ? (step.with = inputJson) : delete step.with;
 
     return stringify(action);
 };
