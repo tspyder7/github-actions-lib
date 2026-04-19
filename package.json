@@ -6,7 +6,7 @@
     "description": "Reusable GitHub Actions and workflows",
     "packageManager": "pnpm@10.9.0",
     "scripts": {
-        "build": "node esbuild.config.mjs",
+        "build": "node tsc.build.mjs",
         "build:watch": "node esbuild.config.mjs --watch",
         "lint": "eslint src/ --ext .ts,.js",
         "lint:fix": "eslint src/ --ext .ts,.js --fix",

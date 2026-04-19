@@ -17,12 +17,12 @@
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "skipLibCheck": true,
-        "declaration": true,
-        "declarationMap": true,
+        "declaration": false,
+        "declarationMap": false,
         "sourceMap": true,
         "outDir": "./dist",
         "rootDir": "./src",
-        "types": ["node"]
+        "types": ["node"],
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules", "dist"]
