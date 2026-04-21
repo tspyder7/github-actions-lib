@@ -168,7 +168,7 @@ Example: `feat: add npm-publish workflow for automated package publishing`
 
 ### Workflows
 
-Each workflow should have corresponding docs in `.github/docs/`:
+Each workflow should have corresponding docs in `docs/`:
 
 - Filename: `{workflow-name}.md`
 - Include: Features, usage, inputs, secrets, example caller workflows
@@ -203,11 +203,12 @@ actions/                         # Reusable actions (composite)
         └── templates/
             └── *.ts
 
-.github/                        # GitHub workflows and docs
+docs/                           # Documentation files
+├── *.md
+
+.github/                        # GitHub workflows
 ├── workflows/
 │   ├── *.yml
-├── docs/
-│   └── *.md
 └── PULL_REQUEST_TEMPLATE.md
 
 shared/                         # Optional: shared utilities
