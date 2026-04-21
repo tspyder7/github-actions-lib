@@ -12,7 +12,7 @@
         "lint:fix": "eslint --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "markdownlint": "markdownlint '**/*.md' --config markdownlint.json --ignore 'node_modules/' --ignore '.git/' --ignore 'dist/' --ignore '.opencode/' --ignore 'AGENTS.md' --ignore 'README.md'",
+        "markdownlint": "markdownlint --fix '**/*.md' --config markdownlint.json",
         "ci": "pnpm run lint && pnpm run format:check && pnpm run markdownlint",
         "prepare": "husky"
     },

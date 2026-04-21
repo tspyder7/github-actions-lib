@@ -54,7 +54,8 @@ jobs:
 | `uses` | string | Yes | - | Custom action to call in the generated action |
 | `with` | string | No | - | JSON string of inputs to pass to the custom action |
 
-### action-type:
+### action-type
+
 | Name | Description |
 |------|------|
 | `publish` | Will generate action at runtime: `./.github/actions/publish/` |

@@ -190,7 +190,7 @@ Each action should have a README.md in the action directory:
 
 ## File Organization
 
-```
+```text
 actions/                         # Reusable actions (composite)
 └── <action-name>/
     ├── action.yml               # Required: action definition
