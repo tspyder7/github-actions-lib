@@ -1,0 +1,41 @@
+{
+    "name": "github-actions-lib",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Reusable GitHub Actions and workflows",
+    "packageManager": "pnpm@10.9.0",
+    "scripts": {
+        "build": "node esbuild.config.mjs",
+        "build:watch": "node esbuild.config.mjs --watch",
+        "lint": "eslint",
+        "lint:fix": "eslint --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "markdownlint": "markdownlint --fix '**/*.md' --config markdownlint.json",
+        "ci": "pnpm run lint && pnpm run format:check && pnpm run markdownlint",
+        "prepare": "husky"
+    },
+    "dependencies": {
+        "@actions/core": "^3.0.0",
+        "esbuild": "^0.24.2",
+        "typescript": "^5.9.3",
+        "yaml": "^2.8.3"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^19.8.1",
+        "@commitlint/config-conventional": "^19.8.1",
+        "@eslint/js": "^9.39.4",
+        "@types/node": "^22.19.17",
+        "@typescript-eslint/eslint-plugin": "^8.58.0",
+        "@typescript-eslint/parser": "^8.58.0",
+        "eslint": "^9.39.4",
+        "husky": "^9.1.7",
+        "markdownlint-cli": "^0.41.0",
+        "prettier": "^3.8.1"
+    },
+    "engines": {
+        "node": ">=20.0.0",
+        "pnpm": ">=9.0.0"
+    }
+}

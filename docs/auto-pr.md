@@ -17,17 +17,18 @@ This reusable GitHub Actions workflow automatically creates or updates pull requ
   - 📦 Others
 - Appends release notes to existing open PRs
 
-## ✔️ Requirements:
-- Need to create Github **_Personal Access Token_** with fine grade access
-    - `Contents` -> `Read & Write`
-    - `Pull Requests` -> `Read & Write`
+## ✔️ Requirements
+
+- Need to create Github __Personal Access Token__ with fine grade access
+  - `Contents` -> `Read & Write`
+  - `Pull Requests` -> `Read & Write`
 - Create a secret `GH_REPO_TOKEN` in repository and store above token in it.
 
 ## 📦 Usage
 
 To use this workflow, call it from another workflow using `workflow_call`.
 
-> ⏳ **Workflow Timeout:** Each job in this workflow is configured with a maximum runtime of **10 minutes**.
+> ⏳ __Workflow Timeout:__ Each job in this workflow is configured with a maximum runtime of __10 minutes__.
 > If a job exceeds this limit, GitHub Actions will automatically cancel it.
 
 ### 🧾 Workflow Inputs

@@ -1,0 +1,9 @@
+dist/
+node_modules/
+pnpm-lock.yaml
+.git/
+*.yml
+*.yaml
+*.log
+.env
+.env.*

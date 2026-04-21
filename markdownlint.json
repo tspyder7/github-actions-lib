@@ -1,0 +1,33 @@
+{
+    "default": true,
+    "MD003": {
+        "style": "atx"
+    },
+    "MD013": false,
+    "MD024": {
+        "allow_different_nesting": true
+    },
+    "MD033": {
+        "allowed_elements": []
+    },
+    "MD040": true,
+    "MD041": true,
+    "MD047": true,
+    "MD049": {
+        "style": "single"
+    },
+    "MD050": {
+        "style": "consistent"
+    },
+    "MD051": true,
+    "MD053": true,
+    "ignore": [
+        "node_modules/",
+        ".git/",
+        "dist/",
+        ".opencode/",
+        "AGENTS.md",
+        "README.md",
+        ".husky/"
+    ]
+}

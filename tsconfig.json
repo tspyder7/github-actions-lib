@@ -1,0 +1,47 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "lib": [
+            "ES2020"
+        ],
+        "moduleResolution": "bundler",
+        "resolveJsonModule": true,
+        "allowJs": true,
+        "checkJs": false,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noImplicitOverride": true,
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": true,
+        "outDir": "./dist",
+        "rootDir": ".",
+        "types": [
+            "node"
+        ],
+        "paths": {
+            "@shared/*": [
+                "./shared/*"
+            ],
+            "@actions/*": [
+                "./actions/*"
+            ]
+        }
+    },
+    "include": [
+        "actions",
+        "shared/utils"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ],
+}

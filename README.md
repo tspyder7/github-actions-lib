@@ -1,4 +1,4 @@
-# 🧩 github-action-lib: Reusable GitHub Actions
+# github-actions-lib: Reusable GitHub Actions
 
 This repository contains **reusable GitHub Actions** and **workflows** for internal organization use.
 
@@ -10,7 +10,9 @@ This repository contains **reusable GitHub Actions** and **workflows** for inter
 
 | Action | Description | Documentation |
 |--------|-------------|---------------|
-| [`npm-publish`](.github/actions/npm-publish/) | Publish packages to NPM with npm/yarn/pnpm support | [README](.github/actions/npm-publish/README.md) |
+| [`action-generator`](actions/action-generator/) | Generates composite actions | [README](actions/action-generator/README.md) |
+| [`npm-publish`](actions/npm-publish/) | Publish packages to NPM with npm/yarn/pnpm support | [README](actions/npm-publish/README.md) |
+| [`sleep-for-while`](actions/sleep-for-while/) | Sleeps for given seconds and optionally prints a message | [README](actions/sleep-for-while/README.md) |
 
 ---
 
@@ -18,6 +20,12 @@ This repository contains **reusable GitHub Actions** and **workflows** for inter
 
 | Workflow | Description | Documentation |
 |----------|-------------|---------------|
-| [`auto-pr.yml`](.github/workflows/auto-pr.yml) | Auto-generate PRs from branch hierarchy | [README](.github/docs/auto-pr.md) |
-| [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml) | Enforce PR branch hierarchy rules | [README](.github/docs/enforce-pr-hierarchy.md) |
-| [`npm-publish.yml`](.github/workflows/npm-publish.yml) | Publish packages to NPM registry | [README](.github/docs/npm-publish.md) |
+| [`auto-pr.yml`](.github/workflows/auto-pr.yml) | Auto-generate PRs from branch hierarchy | [README](docs/auto-pr.md) |
+| [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml) | Enforce PR branch hierarchy rules | [README](docs/enforce-pr-hierarchy.md) |
+| [`npm-publish.yml`](.github/workflows/npm-publish.yml) | Publish packages to NPM registry | [README](docs/npm-publish.md) |
+
+---
+
+## License
+
+Apache License Version 2.0
