@@ -22,7 +22,7 @@ To use this workflow in your repository, define a workflow file that calls it us
 | Name            | Type   | Required | Default                        | Description                                                                 |
 |-----------------|--------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | node-version    | string | No       | 22                             | Node.js version to use for setup and publishing |
-| registry-url    | string | No       | https://registry.npmjs.org/    | NPM registry URL where the package will be published |
+| registry-url    | string | No       | <https://registry.npmjs.org/>    | NPM registry URL where the package will be published |
 | package-manager | string | Yes      | —                              | Package manager to use (pnpm, yarn, or npm) for installing and build |
 | publish-tag | string | No      | latest                              | Tag the npm package |
 | timeout_minutes | number | No   | 10         | Custom Timeout in Minutes        |
@@ -32,7 +32,6 @@ To use this workflow in your repository, define a workflow file that calls it us
 | Name      | Required | Default | Description                                                |
 |-----------|----------|---------|------------------------------------------------------------|
 | NPM_TOKEN | Yes      | —       | NPM authentication token used to publish the package           |
-
 
 ### Example Caller Workflow
 

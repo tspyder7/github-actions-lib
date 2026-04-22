@@ -22,7 +22,8 @@ This reusable GitHub Actions workflow enforces branch hierarchy rules for pull r
 > If a job exceeds this limit, GitHub Actions will automatically cancel it.
 
 ### 📄 Default Template
-```
+
+```text
 🚫 **PR Automatically Closed - Branch Hierarchy Violation**
 
 **Issue**: This pull request violates the configured branch hierarchy rules.

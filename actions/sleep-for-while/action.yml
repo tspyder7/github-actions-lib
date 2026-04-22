@@ -1,0 +1,28 @@
+name: sleep-for-while
+description: "Sleeps for given seconds and optionally prints a message"
+
+inputs:
+  sleep_time:
+    description: "Time to sleep in seconds"
+    required: false
+    default: "5"
+  message:
+    description: "Optional message to print after sleep"
+    required: false
+    default: "I'm awake now"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Start log
+      shell: bash
+      run: echo "⏳ Sleeping for ${{ inputs.sleep_time }} seconds..."
+
+    - name: Sleep
+      shell: bash
+      run: sleep ${{ inputs.sleep_time }}
+
+    - name: Print message if provided
+      shell: bash
+      run: |
+        echo "📢 ${{ inputs.message }}"
