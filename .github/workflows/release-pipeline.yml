@@ -129,7 +129,7 @@ jobs:
             type="${{ inputs.release-type }}"
             echo "Source : workflow_dispatch input"
           else
-            commit_msg=$(git log --reverse --format=%s | head -n1)
+            commit_msg=$(git log --format=%s | head -n1)
             echo "Commit message : $commit_msg"
             type=$(echo "$commit_msg" | sed -n 's/^release(\(.*\)):.*$/\1/p')
             echo "Source : commit message"
