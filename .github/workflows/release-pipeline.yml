@@ -151,7 +151,8 @@ jobs:
           release_type="${{ steps.release-type.outputs.type }}"
           type=$([ "$release_type" = "latest" ] && echo "prod" || echo "$release_type")
           config=".release/$type/release-please-config.json"
-          manifest=".release/$type/release-please-manifest.json"
+          # manifest=".release/$type/release-please-manifest.json"
+          manifest=".release/manifest.json"
           echo "release_please_config=$config"       >> "$GITHUB_OUTPUT"
           echo "release_please_manifest=$manifest"   >> "$GITHUB_OUTPUT"
           echo "ℹ️  Config   : $config"
