@@ -12,10 +12,12 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
 ## Prerequisites
 
 1. **Release Please configs**: For each supported release type (`rc`, `alpha`, `beta`, `latest`), create the following files in your repository:
-   ```
+
+   ```text
    .release/<type>/release-please-config.json
    .release/<type>/release-please-manifest.json
    ```
+
    Follow the [Release Please configuration guide](https://github.com/googleapis/release-please#configuration) for content specifics.
 
 2. **Publish action**: The `publish` input requires a valid GitHub Action reference (e.g., `your-org/github-actions-lib/actions/npm-publish@main`). Ensure the action is accessible to the workflow.

@@ -10,7 +10,7 @@ This repository contains reusable GitHub Actions and workflows for internal use 
 
 ## Project Structure
 
-```
+```text
 .github/
 ├── workflows/           # Reusable workflows (workflow_call)
 │   └── *.yml
