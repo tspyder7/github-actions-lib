@@ -180,7 +180,7 @@ jobs:
           fi
 
       - name: Run Release Please
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         id: release-please-action
         with:
           config-file: ${{ steps.release-please.outputs.release_please_config }}
