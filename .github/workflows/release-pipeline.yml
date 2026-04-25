@@ -14,140 +14,304 @@ on:
         required: false
         default: latest
       publish:
-        description: "Publish action to publish package to the registry"
+        description: "Publish action config in JSON format. Must include a 'uses' key
+          and optional 'with' map."
         type: string
-        required: false
-
+        required: true
       timeout_minutes:
         type: number
         default: 10
         required: false
 
 jobs:
+
+  # ── Job 1: Decide what to run ──────────────────────────────
   setup-pipeline:
     name: Setup Pipeline
     runs-on: ubuntu-latest
-    outputs:
-      generate_release: ${{ steps.evaluate-workflow-trigger.generate_release }}
-      publish_package: ${{ steps.evaluate-workflow-trigger.publish_package }}
     timeout-minutes: ${{ inputs.timeout_minutes }}
+    outputs:
+      generate_release: ${{ steps.evaluate-workflow-trigger.outputs.generate_release }}
+      publish_package: ${{ steps.evaluate-workflow-trigger.outputs.publish_package }}
+
     steps:
-      - name: Evaluate workflow triggers
+      - name: Evaluate Workflow Trigger
         id: evaluate-workflow-trigger
         run: |
-          echo "generate_release=false" >> $GITHUB_OUTPUT
-          echo "publish_package=false" >> $GITHUB_OUTPUT
+          echo "::group::📋 Trigger Evaluation"
+          echo "Event      : ${{ github.event_name }}"
+          echo "Ref        : ${{ github.ref_name }}"
+          echo "Repository : ${{ github.repository }}"
+          echo "::endgroup::"
+
+          # Defaults — no jobs run unless a condition below matches
+          echo "generate_release=false" >> "$GITHUB_OUTPUT"
+          echo "publish_package=false"  >> "$GITHUB_OUTPUT"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Manual trigger: only run release
-            echo "generate_release=true" >> $GITHUB_OUTPUT
+            echo "✅ Manual dispatch detected — queuing release job only"
+            echo "generate_release=true" >> "$GITHUB_OUTPUT"
+
           elif [ "${{ github.event_name }}" = "push" ]; then
             commits_json='${{ toJson(github.event.commits) }}'
             commits_count=$(echo "$commits_json" | jq 'length')
-            echo "🔍 Commit count: $commits_count"
+            echo "📦 Commits in push: $commits_count"
+
             if [ "$commits_count" -eq 1 ]; then
               msg=$(echo "$commits_json" | jq -r '.[0].message')
-              echo "🔍 Commit message: $msg"
+              echo "📝 Commit message : $msg"
+
               if [[ "$msg" =~ ^release\(.* ]]; then
-                echo "generate_release=true" >> $GITHUB_OUTPUT
-                echo "publish_package=true" >> $GITHUB_OUTPUT
+                echo "✅ Release commit detected — queuing release + publish jobs"
+                echo "generate_release=true" >> "$GITHUB_OUTPUT"
+                echo "publish_package=true"  >> "$GITHUB_OUTPUT"
+              else
+                echo "ℹ️  Commit does not match release pattern — skipping pipeline"
               fi
+            else
+              echo "ℹ️  Push contains $commits_count commits (expected 1 for release) — skipping pipeline"
             fi
+
+          else
+            echo "ℹ️  Unrecognized event '${{ github.event_name }}' — skipping pipeline"
           fi
 
+      - name: Pipeline Decision Summary
+        run: |
+          echo "::group::🗺️ What will run"
+          echo "generate_release : ${{ steps.evaluate-workflow-trigger.outputs.generate_release }}"
+          echo "publish_package  : ${{ steps.evaluate-workflow-trigger.outputs.publish_package }}"
+          echo "::endgroup::"
+
+          {
+            echo "## 🔍 Pipeline Trigger Summary"
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Event | \`${{ github.event_name }}\` |"
+            echo "| Ref | \`${{ github.ref_name }}\` |"
+            echo "| Generate Release | \`${{ steps.evaluate-workflow-trigger.outputs.generate_release }}\` |"
+            echo "| Publish Package  | \`${{ steps.evaluate-workflow-trigger.outputs.publish_package }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Job 2: Create / update the release PR ─────────────────
   release-generator:
     name: Release Generator
     runs-on: ubuntu-latest
-    needs: [setup-pipeline]
+    needs: [ setup-pipeline ]
     if: needs.setup-pipeline.outputs.generate_release == 'true'
     timeout-minutes: ${{ inputs.timeout_minutes }}
     environment:
-      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || ''}}
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || ''
+        }}
     permissions:
       contents: write
       actions: write
       pull-requests: write
-    steps:
-      - name: Log Workflow Context
-        run: |
-          echo "::group::🔍 Workflow Execution Context"
-          echo "Event: ${{ github.event_name }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Ref Name: ${{ github.ref_name }}"
-          echo "::endgroup::"
 
-      - name: Checkout code
+    steps:
+      - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for release-please changelog generation
 
       - name: Determine Release Type
         id: release-type
         run: |
+          echo "::group::🔖 Release Type Resolution"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ inputs.release_type }}" >> $GITHUB_OUTPUT
+            type="${{ inputs.release-type }}"
+            echo "Source : workflow_dispatch input"
           else
-            # Extract release type from first commit message
             commit_msg=$(git log --reverse --format=%s | head -n1)
-            echo "Commit message: $commit_msg"
+            echo "Commit message : $commit_msg"
             type=$(echo "$commit_msg" | sed -n 's/^release(\(.*\)):.*$/\1/p')
-            echo "type=$type" >> $GITHUB_OUTPUT
+            echo "Source : commit message"
           fi
 
-      - name: Set Release Please Config Paths
+          echo "Resolved type : $type"
+          echo "::endgroup::"
+
+          if [ -z "$type" ]; then
+            echo "::error::Could not resolve release type. Commit message must match 'release(<type>): ...' or a valid release-type input must be provided."
+            exit 1
+          fi
+
+          echo "type=$type" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Release-Please Config Paths
         id: release-please
         run: |
           type="${{ steps.release-type.outputs.type }}"
-          echo "release_please_config=.release/$type/release-please-config.json" >> $GITHUB_OUTPUT
-          echo "release_please_manifest=.release/$type/release-please-manifest.json" >> $GITHUB_OUTPUT
+          config=".release/$type/release-please-config.json"
+          manifest=".release/$type/release-please-manifest.json"
+          echo "release_please_config=$config"       >> "$GITHUB_OUTPUT"
+          echo "release_please_manifest=$manifest"   >> "$GITHUB_OUTPUT"
+          echo "ℹ️  Config   : $config"
+          echo "ℹ️  Manifest : $manifest"
 
       - name: Validate Config and Manifest
         run: |
           config="${{ steps.release-please.outputs.release_please_config }}"
           manifest="${{ steps.release-please.outputs.release_please_manifest }}"
-          echo "Checking files: $C and $manifest"
-          if [ ! -f "$config" ] || [ ! -f "$manifest" ]; then
-            echo "::error::Required release-please files not found."
-            echo "       ::Manifest File: $manifest"
-            echo "       ::Config File: $config"
+          errors=0
+
+          echo "::group::📂 Checking required release-please files"
+          for file in "$config" "$manifest"; do
+            if [ -f "$file" ]; then
+              echo "✅ Found : $file"
+            else
+              echo "::error file=$file::Required file not found: $file"
+              errors=$((errors + 1))
+            fi
+          done
+          echo "::endgroup::"
+
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::$errors required file(s) missing. Ensure .release/<type>/ contains both release-please-config.json and release-please-manifest.json."
             exit 1
           fi
 
+      - name: Run Release Please
+        uses: googleapis/release-please-action@v4
+        id: release-please-action
+        with:
+          config-file: ${{ steps.release-please.outputs.release_please_config }}
+          manifest-file: ${{ steps.release-please.outputs.release_please_manifest }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Generator Summary
+        if: always()
+        run: |
+          {
+            echo "## 🏷️ Release Generator"
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Release Type  | \`${{ steps.release-type.outputs.type }}\` |"
+            echo "| Config File   | \`${{ steps.release-please.outputs.release_please_config }}\` |"
+            echo "| Manifest File | \`${{ steps.release-please.outputs.release_please_manifest }}\` |"
+            echo "| Job Status    | \`${{ job.status }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Job 3: Publish the package ─────────────────────────────
   publish:
     name: Publish
-    needs: [setup-pipeline, release-generator]
+    needs: [ setup-pipeline, release-generator ]
     if: needs.setup-pipeline.outputs.publish_package == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.timeout_minutes }}
-    steps:
-      - name: Generate Publish Action
-        run: |
-          echo "TODO: will generate custom action at runtime to resolve publish package"
 
+    steps:
+      - name: Resolve Publish Action Config
+        id: extract-input
+        run: |
+          echo "::group::🔎 Parsing publish input"
+          uses=$(echo '${{ inputs.publish }}' | jq -r '.uses')
+          with_json=$(echo '${{ inputs.publish }}' | jq -c '.with // null')
+
+          if [ -z "$uses" ] || [ "$uses" = "null" ]; then
+            echo "::error::publish input JSON is missing required key 'uses'."
+            exit 1
+          fi
+
+          echo "::endgroup::"
+
+          echo "uses=$uses"         >> "$GITHUB_OUTPUT"
+          echo "with=$with_json"    >> "$GITHUB_OUTPUT"
+
+      - name: Generate Publish Action
+        uses: tspyder7/github-actions-lib/actions/action-generator@main
+        with:
+          action-type: publish
+          uses: ${{ steps.extract-input.outputs.uses }}
+          with: ${{ steps.extract-input.outputs.with }}
+
+      - name: Verify Generated Action File
+        id: verify_file
+        run: |
+          FILE=".github/actions/publish/action.yml"
+          echo "::group::📂 Verifying generated action"
+          if [ ! -f "$FILE" ]; then
+            echo "::error file=$FILE::Generated action file not found: $FILE"
+            echo "file_exists=false" >> "$GITHUB_OUTPUT"
+            echo "::endgroup::"
+            exit 1
+          fi
+          echo "✅ File exists: $FILE"
+          echo "file_exists=true" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+
+      - name: Execute Publish Action
+        if: steps.verify_file.outputs.file_exists == 'true'
+        id: execute-publish-action
+        uses: ./.github/actions/publish/
+
+      - name: Publish Summary
+        if: always()
+        run: |
+          {
+            echo "## 📦 Publish"
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Action | \`${{ steps.extract-input.outputs.uses }}\` |"
+            echo "| File Verified | \`${{ steps.verify_file.outputs.file_exists }}\` |"
+            echo "| Job Status | \`${{ job.status }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Job 4: Final summary ───────────────────────────────────
   summary:
-    name: Summary
-    needs: [setup-pipeline, release-generator, publish]
+    name: Workflow Summary
+    needs: [ setup-pipeline, release-generator, publish ]
     if: always()
     runs-on: ubuntu-latest
-    steps:
-      - name: Add workflow summary and logs
-        run: |
-          run_release="${{ needs.validate-trigger-conditions.outputs.run_release }}"
-          run_publish="${{ needs.validate-trigger-conditions.outputs.run_publish }}"
 
-          echo "::group::📋 Workflow Summary"
-          if [ "$run_release" != "true" ]; then
-            echo "🚫 Workflow skipped"
-            echo "### 🚫 Workflow skipped" >> $GITHUB_STEP_SUMMARY
-          elif [ "$run_release" = "true" ] && [ "$run_publish" != "true" ]; then
-            echo "✅ Release job ran, publish skipped"
-            {
-              echo "### ✅ Release job ran"
-              echo "- Publish job skipped"
-            } >> $GITHUB_STEP_SUMMARY
-          else
-            echo "✅ Release and publish jobs ran"
-            {
-              echo "### ✅ Release and publish jobs ran"
-              echo "- Both release and publish completed successfully"
-            } >> $GITHUB_STEP_SUMMARY
-          fi
+    steps:
+      - name: Write Final Summary
+        run: |
+          # FIX #5: Was referencing non-existent job `validate-trigger-conditions` — corrected to `setup-pipeline`
+          # FIX #6: `file_exists` moved to `publish` job where it's actually set, not `release-generator`
+          run_release="${{ needs.setup-pipeline.outputs.generate_release }}"
+          run_publish="${{ needs.setup-pipeline.outputs.publish_package }}"
+
+          release_result="${{ needs.release-generator.result }}"
+          publish_result="${{ needs.publish.result }}"
+
+          echo "::group::📊 Final Workflow State"
+          echo "generate_release  : $run_release"
+          echo "publish_package   : $run_publish"
+          echo "release job       : $release_result"
+          echo "publish job       : $publish_result"
           echo "::endgroup::"
+
+          {
+            echo "---"
+            echo "## 📊 Final Pipeline Summary"
+            echo ""
+            echo "| Job | Requested | Result |"
+            echo "|-----|-----------|--------|"
+            echo "| Release Generator | \`$run_release\` | \`${release_result:-skipped}\` |"
+            echo "| Publish           | \`$run_publish\`  | \`${publish_result:-skipped}\` |"
+            echo ""
+
+            # Determine overall outcome
+            if [ "$run_release" != "true" ]; then
+              echo "### 🚫 Pipeline Skipped"
+              echo "The trigger did not match a release pattern. No jobs were executed."
+
+            elif [ "$release_result" = "failure" ]; then
+              echo "### ❌ Pipeline Failed — Release Generator"
+              echo "The release generator job failed. Check the Release Generator job logs for details."
+
+            elif [ "$publish_result" = "failure" ]; then
+              echo "### ❌ Pipeline Failed — Publish"
+              echo "The publish job failed after a successful release. Check the Publish job logs."
+
+            elif [ "$run_release" = "true" ] && [ "$run_publish" != "true" ]; then
+              echo "### ✅ Release Only"
+              echo "Release PR was created/updated. Publish was not requested (manual dispatch)."
+
+            else
+              echo "### ✅ Release + Publish Complete"
+              echo "Both the release generator and publish jobs completed successfully."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
