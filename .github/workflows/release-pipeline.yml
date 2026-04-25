@@ -148,7 +148,8 @@ jobs:
       - name: Resolve Release-Please Config Paths
         id: release-please
         run: |
-          type="${{ steps.release-type.outputs.type }}"
+          release_type="${{ steps.release-type.outputs.type }}"
+          type=$([ "$release_type" = "latest" ] && echo "prod" || echo "$release_type")
           config=".release/$type/release-please-config.json"
           manifest=".release/$type/release-please-manifest.json"
           echo "release_please_config=$config"       >> "$GITHUB_OUTPUT"
