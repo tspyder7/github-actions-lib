@@ -23,6 +23,12 @@ on:
         default: 10
         required: false
 
+    secrets:
+      GH_TOKEN:
+        description: "GitHub token with contents:write, pull-requests:write & actions:
+          write permissions"
+        required: true
+
 jobs:
 
   # ── Job 1: Decide what to run ──────────────────────────────
