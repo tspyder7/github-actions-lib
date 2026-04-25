@@ -20,7 +20,7 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
 
    Follow the [Release Please configuration guide](https://github.com/googleapis/release-please#configuration) for content specifics.
 
-2. **Publish action**: The `publish` input requires a valid GitHub Action reference (e.g., `your-org/github-actions-lib/actions/npm-publish@main`). Ensure the action is accessible to the workflow.
+2. **Publish action**: The `publish` input requires a valid GitHub Action reference (e.g., `tspyder7/github-actions-lib/actions/npm-publish@main`). Ensure the action is accessible to the workflow.
 
 ## Usage
 
@@ -68,11 +68,11 @@ on:
 
 jobs:
   release:
-    uses: your-org/github-actions-lib/.github/workflows/release-pipeline.yml@main
+    uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
     with:
       publish: |
         {
-          "uses": "your-org/github-actions-lib/actions/npm-publish@main",
+          "uses": "tspyder7/github-actions-lib/actions/npm-publish@main",
           "with": {
             "registry": "https://registry.npmjs.org",
             "token": "${{ secrets.NPM_TOKEN }}"
@@ -101,13 +101,13 @@ on:
 
 jobs:
   release:
-    uses: your-org/github-actions-lib/.github/workflows/release-pipeline.yml@main
+    uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
     with:
       environment: ${{ inputs.environment }}
       release-type: ${{ inputs.release-type }}
       publish: |
         {
-          "uses": "your-org/github-actions-lib/actions/npm-publish@main",
+          "uses": "tspyder7/github-actions-lib/actions/npm-publish@main",
           "with": {
             "registry": "https://registry.npmjs.org",
             "token": "${{ secrets.NPM_TOKEN }}"
