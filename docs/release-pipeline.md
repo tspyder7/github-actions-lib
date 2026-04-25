@@ -7,7 +7,7 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
 - **Release Please integration**: Generates release PRs, changelogs, and versions using per-type Release Please configs
 - **Dynamic publish support**: Accepts arbitrary publish actions via JSON config, enabling NPM/Docker/custom publishing
 - **Job result aggregation**: Final summary job collates outcomes of all pipeline steps with clear status reporting
-- **Minimal permissions**: Release generator job uses scoped `contents: write`, `pull-requests: write`, `actions: write` permissions
+- **Scoped permissions**: Uses provided `GH_TOKEN` with explicit `contents:write`, `pull-requests:write` & `actions:write` permissions
 
 ## Prerequisites
 
@@ -39,7 +39,11 @@ All inputs are passed via the `with` block of the `uses` call in the parent work
 
 ### Secrets
 
-The workflow uses the automatic `GITHUB_TOKEN` for Release Please operations, with permissions scoped via the `release-generator` job. Any secrets required by the publish action (e.g., `NPM_TOKEN`) must be included in the `with` map of the `publish` input JSON.
+| Secret Name | Required | Description |
+|-------------|----------|-------------|
+| `GH_TOKEN` | Yes | GitHub token with `contents:write`, `pull-requests:write` & `actions:write` permissions |
+
+Any additional secrets required by the publish action (e.g., `NPM_TOKEN`) must be included in the `with` map of the `publish` input JSON.
 
 ## Pipeline Logic
 
@@ -69,6 +73,8 @@ on:
 jobs:
   release:
     uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
       publish: |
         {
@@ -102,6 +108,8 @@ on:
 jobs:
   release:
     uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
       environment: ${{ inputs.environment }}
       release-type: ${{ inputs.release-type }}
