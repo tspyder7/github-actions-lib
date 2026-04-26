@@ -23,6 +23,7 @@ This repository contains **reusable GitHub Actions** and **workflows** for inter
 | [`auto-pr.yml`](.github/workflows/auto-pr.yml) | Auto-generate PRs from branch hierarchy | [README](docs/auto-pr.md) |
 | [`enforce-pr-hierarchy.yml`](.github/workflows/enforce-pr-hierarchy.yml) | Enforce PR branch hierarchy rules | [README](docs/enforce-pr-hierarchy.md) |
 | [`npm-publish.yml`](.github/workflows/npm-publish.yml) | Publish packages to NPM registry | [README](docs/npm-publish.md) |
+| [`release-pipeline.yml`](.github/workflows/release-pipeline.yml) | Create release and publish packages | [README](docs/release-pipeline.md)  |
 
 ---
 
