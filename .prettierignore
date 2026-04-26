@@ -7,3 +7,5 @@ pnpm-lock.yaml
 *.log
 .env
 .env.*
+*.json
+*.md

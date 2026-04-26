@@ -12,8 +12,9 @@
         "lint:fix": "eslint --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "markdownlint": "markdownlint --fix '**/*.md' --config markdownlint.json",
-        "ci": "pnpm run lint && pnpm run format:check && pnpm run markdownlint",
+        "markdownlint": "markdownlint '**/*.md' --config markdownlint.json",
+        "markdownlint:fix": "markdownlint --fix '**/*.md' --config markdownlint.json",
+        "ci:check": "pnpm lint && pnpm format:check && pnpm markdownlint",
         "prepare": "husky"
     },
     "dependencies": {
