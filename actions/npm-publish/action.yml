@@ -80,11 +80,11 @@ runs:
 
     # STEP 2: Checkout
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     # STEP 3: Setup Node
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: ${{ inputs.registry-url }}
@@ -92,6 +92,8 @@ runs:
     - name: Log Node.js setup
       shell: bash
       run: |
+        # upgrade npm to latest version for trusted publishing features
+        npm install -g npm@latest
         echo "⚡ Node.js setup completed"
         echo "  - Node version: $(node --version)"
         echo "  - NPM version: $(npm --version)"

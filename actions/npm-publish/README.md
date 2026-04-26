@@ -25,7 +25,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Publish to NPM
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
@@ -40,7 +40,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Publish with pnpm
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
@@ -58,7 +58,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Publish to NPM
         id: publish
@@ -79,7 +79,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Publish from subdirectory
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
@@ -145,7 +145,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Get version from tag
         id: version

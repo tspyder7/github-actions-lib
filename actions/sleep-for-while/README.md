@@ -71,7 +71,7 @@ jobs:
   wait:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Sleep for 15 seconds
         uses: tspyder7/github-actions-lib/actions/sleep-for-while@main
