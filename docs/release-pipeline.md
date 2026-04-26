@@ -14,9 +14,16 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
 1. **Release Please configs**: For each supported release type (`rc`, `alpha`, `beta`, `latest`), create the following files in your repository:
 
    ```text
-   .release/<type>/release-please-config.json
-   .release/<type>/release-please-manifest.json
+   .release/<type>/config.json
+   .release/<type>/manifest.json
    ```
+
+   | Release Type | Folder |
+   |--------------|--------|
+   | `rc`         | `.release/rc/` |
+   | `alpha`      | `.release/alpha/` |
+   | `beta`       | `.release/beta/` |
+   | `latest`     | `.release/prod/` |
 
    Follow the [Release Please configuration guide](https://github.com/googleapis/release-please#configuration) for content specifics.
 
