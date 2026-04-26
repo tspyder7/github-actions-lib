@@ -1,7 +1,7 @@
 # Github Action: npm-publish
 
 name: "npm-publish"
-description: "Action to publish npm packages"
+description: "Action to publish npm packages using Trusted Publishing"
 
 inputs:
   node-version:
@@ -27,10 +27,6 @@ inputs:
     description: Directory where commands should run
     required: false
     default: "."
-
-  registry-token:
-    description: NPM authentication token used to publish the package
-    required: true
 
 outputs:
   package-name:
@@ -210,8 +206,6 @@ runs:
       id: publish
       shell: bash
       working-directory: ${{ inputs.work-dir }}
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.registry-token }}
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
         REGISTRY_URL="${{ inputs.registry-url }}"
