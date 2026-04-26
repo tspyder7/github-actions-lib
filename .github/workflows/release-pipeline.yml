@@ -175,7 +175,7 @@ jobs:
           echo "::endgroup::"
 
           if [ "$errors" -gt 0 ]; then
-            echo "::error::$errors required file(s) missing. Ensure .release/<type>/ contains both release-please-config.json and release-please-manifest.json."
+            echo "::error::$errors required file(s) missing. Ensure .release/<type>/ contains both config.json and manifest.json."
             exit 1
           fi
 
