@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -364,4 +364,5 @@ jobs:
 
       - name: No changes detected
         if: steps.setup.outputs.has_commits == 'false'
-        run: echo "No commits ahead of ${{ steps.setup.outputs.base_branch }}. Skipping PR creation/update."
+        run: echo "No commits ahead of ${{ steps.setup.outputs.base_branch }}. Skipping
+          PR creation/update."

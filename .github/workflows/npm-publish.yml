@@ -90,12 +90,12 @@ jobs:
       # STEP 2: Checkout the repository code
       - name: Checkout code
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # STEP 3: Setup the specified Node.js version and registry URL
       - name: Setup Node.js
         id: setup-node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: ${{ env.REGISTRY_URL }}
