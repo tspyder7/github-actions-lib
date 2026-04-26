@@ -11,6 +11,7 @@ A GitHub Action to publish your package to the NPM registry with support for npm
 - Custom NPM registry support
 - Custom working directory
 - Publishes with public access
+- Uses NPM Trusted Publishing (no token required)
 - Outputs package information after publish
 
 ---
@@ -30,7 +31,6 @@ jobs:
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
-          registry-token: ${{ secrets.NPM_TOKEN }}
 ```
 
 ### With Custom Configuration
@@ -49,7 +49,6 @@ jobs:
           registry-url: "https://registry.npmjs.org/"
           package-manager: pnpm
           publish-tag: next
-          registry-token: ${{ secrets.NPM_TOKEN }}
 ```
 
 ### Using Outputs
@@ -66,7 +65,6 @@ jobs:
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
-          registry-token: ${{ secrets.NPM_TOKEN }}
 
       - name: Show publish info
         run: |
@@ -88,7 +86,6 @@ jobs:
         with:
           package-manager: npm
           work-dir: packages/my-package
-          registry-token: ${{ secrets.NPM_TOKEN }}
 ```
 
 ---
@@ -102,7 +99,6 @@ jobs:
 | `package-manager` | string | Yes | — | Package manager to use (`pnpm`, `yarn`, or `npm`) |
 | `publish-tag` | string | No | `latest` | Tag the npm package |
 | `work-dir` | string | No | `.` | Directory where commands should run |
-| `registry-token` | string | Yes | — | NPM authentication token used to publish the package |
 
 ---
 
@@ -113,6 +109,23 @@ jobs:
 | `package-name` | string | Name of the published package |
 | `package-version` | string | Version of the published package |
 | `published-url` | string | URL to the package on npmjs.com |
+
+---
+
+## Trusted Publishing
+
+This action uses [NPM Trusted Publishing](https://docs.npmjs.com/trusted-publishers) for authentication, eliminating the need for API tokens.
+
+### Setup
+
+1. Go to your package settings on npmjs.com
+2. Navigate to **Publishing > Trusted Publishing**
+3. Add a new publisher:
+   - **Name**: GitHub Actions
+   - **Repository**: Select your GitHub repository
+   - **Workflow**: Your publish workflow
+   - **Environment** (optional): Create a GitHub environment (e.g., `npm-publish`) and add it here
+4. Configure your workflow to run on `ubuntu-latest`
 
 ---
 
@@ -145,7 +158,6 @@ jobs:
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
           package-manager: npm
-          registry-token: ${{ secrets.NPM_TOKEN }}
           publish-tag: latest
 ```
 
@@ -156,7 +168,6 @@ jobs:
   uses: tspyder7/github-actions-lib/actions/npm-publish@main
   with:
     package-manager: yarn
-    registry-token: ${{ secrets.NPM_TOKEN }}
 ```
 
 ### Using with pnpm
@@ -166,7 +177,6 @@ jobs:
   uses: tspyder7/github-actions-lib/actions/npm-publish@main
   with:
     package-manager: pnpm
-    registry-token: ${{ secrets.NPM_TOKEN }}
     publish-tag: beta
 ```
 
@@ -175,8 +185,9 @@ jobs:
 ## Requirements
 
 - Node.js 18+ (default: 22)
-- Valid NPM authentication token with publish permissions
+- NPM Trusted Publishing configured on npmjs.com
 - Package.json must exist in the specified working directory
+- GitHub repository must be added to Trusted Publishing
 
 ---
 
