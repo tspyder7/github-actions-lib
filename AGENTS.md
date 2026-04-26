@@ -63,6 +63,21 @@ runs:
   main: dist/script.cjs
 ```
 
+## General Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm build` | Build all TypeScript action source files to CJS output |
+| `pnpm build:watch` | Watch mode for rebuilding on file changes |
+| `pnpm lint` | Run ESLint to check code style |
+| `pnpm lint:fix` | Auto-fix lint issues |
+| `pnpm format` | Format code with Prettier |
+| `pnpm format:check` | Check formatting without fixing |
+| `pnpm markdownlint` | Lint markdown files |
+| `pnpm markdownlint:fix` | Auto-fix markdown issues |
+| `pnpm ci:check` | Run CI validation checks |
+| `pnpm prepare` | Husky git hooks setup (runs on `pnpm install`) |
+
 ## Conventions
 
 ### YAML
