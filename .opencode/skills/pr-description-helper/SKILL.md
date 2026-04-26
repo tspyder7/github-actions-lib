@@ -50,6 +50,8 @@ If the user provides nothing, ask for at minimum: what changed and why.
 Always use this exact template — no extra sections, no reordering:
 
 ```markdown
+**Title:** <concise PR title>
+
 ## Description
 
 What does this PR do?
@@ -67,6 +69,9 @@ Closes #
 
 Fill it in like this:
 
+- **Title**: A short, imperative-mood subject line (50 chars or less). Format:
+  `[type]: short description` where type is one of `feat`, `fix`, `refactor`, `chore`, `docs`,
+  `test`. Example: `feat: add rate limiting to auth endpoints`.
 - **Description**: 2–4 sentences of plain-English explanation of what the PR does and why. Write for
   someone who hasn't seen the code. Avoid vague phrases like "various fixes" or "updates stuff".
 - **Changes**: Bullet list of meaningful changes using action verbs (Add, Fix, Remove, Refactor,
@@ -127,6 +132,8 @@ chore: add redis dependency
 **Output:**
 
 ```markdown
+**Title:** feat: add rate limiting to auth endpoints
+
 ## Description
 
 Adds rate limiting to authentication endpoints to prevent brute-force attacks. Uses Redis to track
@@ -152,6 +159,8 @@ Closes #
 **Output:**
 
 ```markdown
+**Title:** fix: correct cart total floating-point rounding
+
 ## Description
 
 Fixes an incorrect cart total calculation caused by floating-point rounding errors. Customers were
