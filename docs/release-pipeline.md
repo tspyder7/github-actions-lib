@@ -65,60 +65,77 @@ The `setup-pipeline` job evaluates the trigger event to determine which jobs to 
 
 ## Example Caller Workflows
 
-### 1. Automated Release on Push
+### 1. Release Pipeline with sleep-for-whlie
 
-Triggers on pushes to `main` with valid release commits, runs release generation and publishing:
+Triggers on pushes to `main` with valid release commits, and supports manual `workflow_dispatch` for testing releases:
 
 ```yaml
-name: Automated Release
+name: Release Pipeline
 
 on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: "Release type (rc, alpha, beta, latest)"
+        type: choice
+        options:
+          - rc
+          - latest
+        default: latest
   push:
     branches:
       - main
 
 jobs:
   release:
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
     uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
+      environment: production
+      release-type: ${{ inputs.release-type }}
       publish: |
         {
-          "uses": "tspyder7/github-actions-lib/actions/npm-publish@main",
+          "uses": "tspyder7/github-actions-lib/actions/sleep-for-while@main",
           "with": {
-            "registry": "https://registry.npmjs.org",
-            "token": "${{ secrets.NPM_TOKEN }}"
+            "sleep_time": "10",
+            "message": "Slept for 10 seconds. Release is complete"
           }
         }
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_REPO_TOKEN }}
 ```
 
-### 2. Manual Release Dispatch
-
-Triggers manual release generation (publishing is disabled for manual dispatch by default):
+### 2. Release Pipeline for NPM Package
 
 ```yaml
-name: Manual Release
+name: Release Pipeline
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Target environment"
-        type: string
-        required: true
       release-type:
         description: "Release type (rc, alpha, beta, latest)"
-        type: string
+        type: choice
+        options:
+          - rc
+          - latest
         default: latest
+  push:
+    branches:
+      - main
 
 jobs:
   release:
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
     uses: tspyder7/github-actions-lib/.github/workflows/release-pipeline.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
-      environment: ${{ inputs.environment }}
+      environment: production
       release-type: ${{ inputs.release-type }}
       publish: |
         {
@@ -128,9 +145,9 @@ jobs:
             "token": "${{ secrets.NPM_TOKEN }}"
           }
         }
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_REPO_TOKEN }}
 ```
-
-> **Note**: The `publish` input is mandatory even when publishing is disabled, as it is a required workflow input.
 
 ## Job Overview
 
