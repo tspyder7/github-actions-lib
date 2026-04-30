@@ -16,6 +16,7 @@ metadata:
 - Generate a conventional commit message based on the diff
 - **ALWAYS present the message and wait for explicit user approval**
 - **NEVER execute `git commit` without `yes` / `y` confirmation**
+- **NEVER SKIP** any **HUSKY** commit message hooks
 - Allow the user to edit or regenerate the message before committing
 
 ---

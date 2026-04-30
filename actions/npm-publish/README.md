@@ -94,10 +94,11 @@ jobs:
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `node-version` | string | No | `22` | Node.js version to use for setup and publishing |
+| `node-version` | string | No | `24` | Node.js version to use for setup and publishing |
 | `registry-url` | string | No | `https://registry.npmjs.org/` | The npm registry URL where the package will be published |
 | `package-manager` | string | Yes | — | Package manager to use (`pnpm`, `yarn`, or `npm`) |
 | `publish-tag` | string | No | `latest` | Tag the npm package |
+| `publish-access` | string | No | `public` | Access level for the published package (`public` or `restricted`) |
 | `work-dir` | string | No | `.` | Directory where commands should run |
 
 ---
@@ -184,7 +185,7 @@ jobs:
 
 ## Requirements
 
-- Node.js 18+ (default: 22)
+- Node.js 18+ (default: 24)
 - NPM Trusted Publishing configured on npmjs.com
 - Package.json must exist in the specified working directory
 - GitHub repository must be added to Trusted Publishing

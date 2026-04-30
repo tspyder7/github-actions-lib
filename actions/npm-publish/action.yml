@@ -7,7 +7,7 @@ inputs:
   node-version:
     description: Node.js version to use for setup and publishing
     required: false
-    default: "22"
+    default: "24"
 
   registry-url:
     description: The npm registry URL where the package will be published
@@ -22,6 +22,11 @@ inputs:
     description: Tag the npm package
     required: false
     default: "latest"
+
+  publish-access:
+    description: Access level for the published package (public or restricted)
+    required: false
+    default: "public"
 
   work-dir:
     description: Directory where commands should run
@@ -88,12 +93,16 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: ${{ inputs.registry-url }}
+        cache: ${{ inputs.package-manager }}
+        cache-dependency-path: >-
+          ${{ inputs.package-manager == 'pnpm' && format('{0}/pnpm-lock.yaml',
+          inputs.work-dir) || inputs.package-manager == 'yarn' &&
+          format('{0}/yarn.lock', inputs.work-dir) ||
+          format('{0}/package-lock.json', inputs.work-dir) }}
 
     - name: Log Node.js setup
       shell: bash
       run: |
-        # upgrade npm to latest version for trusted publishing features
-        npm install -g npm@latest
         echo "⚡ Node.js setup completed"
         echo "  - Node version: $(node --version)"
         echo "  - NPM version: $(npm --version)"
@@ -103,11 +112,9 @@ runs:
     # STEP 4a: Install pnpm
     - name: Install pnpm
       if: ${{ inputs.package-manager == 'pnpm' }}
-      shell: bash
-      run: |
-        echo "📦 Installing pnpm globally..."
-        npm install -g pnpm
-        echo "✅ pnpm installed successfully"
+      uses: pnpm/action-setup@v4
+      with:
+        run_install: false
 
     - name: Log pnpm version
       if: ${{ inputs.package-manager == 'pnpm' }}
@@ -122,9 +129,10 @@ runs:
       if: ${{ inputs.package-manager == 'yarn' }}
       shell: bash
       run: |
-        echo "🧶 Installing yarn globally..."
         npm install -g yarn
-        echo "✅ yarn installed successfully"
+        echo "🧶 yarn setup completed"
+        echo "  - yarn version:        $(yarn --version)"
+        echo "  - yarn cache directory: $(yarn cache dir)"
 
     - name: Log yarn version
       if: ${{ inputs.package-manager == 'yarn' }}
@@ -134,30 +142,48 @@ runs:
         echo "  - yarn version: $(yarn --version)"
         echo "  - yarn cache directory: $(yarn cache dir)"
 
-    # STEP 5: Install dependencies
+    # STEP 5: Restore node_modules cache
+    - name: Restore node_modules cache
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.work-dir }}/node_modules
+        key: node-modules-${{ runner.os }}-${{ inputs.package-manager }}-${{
+          hashFiles(inputs.package-manager == 'pnpm' &&
+          format('{0}/pnpm-lock.yaml', inputs.work-dir) ||
+          inputs.package-manager == 'yarn' && format('{0}/yarn.lock',
+          inputs.work-dir) || format('{0}/package-lock.json', inputs.work-dir))
+          }}
+        restore-keys: |
+          node-modules-${{ runner.os }}-${{ inputs.package-manager }}-
+
+    # STEP 6: Install dependencies
     - name: Install dependencies
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ inputs.work-dir }}
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
-        echo "📥 Installing project dependencies with $PACKAGE_MANAGER..."
 
-        if [ -f package.json ]; then
-          cat package.json | jq -r '.name + " v" + .version'
-          echo "Dependencies count: $(cat package.json | jq -r '.dependencies | keys | length')"
-          echo "DevDependencies count: $(cat package.json | jq -r '.devDependencies | keys | length')"
-        else
+        if [ ! -f package.json ]; then
           echo "❌ No package.json found!"
           exit 1
         fi
 
+        echo "📦 $(cat package.json | jq -r '.name + " v" + .version')"
+        echo "  - dependencies:    $(cat package.json | jq -r '.dependencies | keys | length')"
+        echo "  - devDependencies: $(cat package.json | jq -r '.devDependencies | keys | length')"
+        echo "📥 Installing with $PACKAGE_MANAGER..."
+
         if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
-          pnpm install
+          pnpm install --frozen-lockfile
         elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
-          yarn install
+          yarn install --frozen-lockfile
         else
-          npm install
+          npm ci
         fi
+
+        echo "📊 node_modules size: $(du -sh node_modules 2>/dev/null || echo 'Not found')"
 
     - name: Log dependency installation results
       shell: bash
@@ -181,26 +207,22 @@ runs:
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
 
-        if cat package.json | jq -e '.scripts.build' > /dev/null; then
-          if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
-            pnpm run build
-          elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
-            yarn build
-          else
-            npm run build
-          fi
-        else
+        if ! cat package.json | jq -e '.scripts.build' > /dev/null; then
           echo "⚠️ No build script found, skipping"
+          exit 0
         fi
 
-    - name: Log build results
-      shell: bash
-      run: |
-        ls -la
+        if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
+          pnpm run build
+        elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
+          yarn build
+        else
+          npm run build
+        fi
+
+        echo "📊 Build output:"
         for dir in dist build lib out public; do
-          if [ -d "$dir" ]; then
-            du -sh $dir
-          fi
+          [ -d "$dir" ] && du -sh "$dir"
         done
 
     # STEP 7: Publish
@@ -208,25 +230,16 @@ runs:
       id: publish
       shell: bash
       working-directory: ${{ inputs.work-dir }}
+      env:
+        NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
       run: |
-        PACKAGE_MANAGER="${{ inputs.package-manager }}"
-        REGISTRY_URL="${{ inputs.registry-url }}"
-        TAG="${{ inputs.publish-tag }}"
-
         PACKAGE_NAME=$(cat package.json | jq -r '.name')
         PACKAGE_VERSION=$(cat package.json | jq -r '.version')
+        TAG="${{ inputs.publish-tag }}"
+        ACCESS="${{ inputs.publish-access }}"
 
-        echo "📦 $PACKAGE_NAME@$PACKAGE_VERSION"
-
-        if [[ "$PACKAGE_MANAGER" == "npm" ]]; then
-          npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version 2>/dev/null || true
-        fi
-
-        case "$PACKAGE_MANAGER" in
-          pnpm) pnpm publish --access public --no-git-checks --tag "$TAG" ;;
-          yarn) yarn publish --access public --non-interactive --tag "$TAG" ;;
-          *)    npm publish --access public --tag "$TAG" ;;
-        esac
+        echo "📦 Publishing $PACKAGE_NAME@$PACKAGE_VERSION with tag '$TAG'..."
+        npm publish --access "$ACCESS" --provenance --tag "$TAG"
 
     - name: Set publish outputs
       id: publish-info
@@ -236,7 +249,7 @@ runs:
       run: |
         PACKAGE_NAME=$(cat package.json | jq -r '.name')
         PACKAGE_VERSION=$(cat package.json | jq -r '.version')
-        echo "package-name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+        echo "package-name=${PACKAGE_NAME}"       >> $GITHUB_OUTPUT
         echo "package-version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
         echo "published-url=https://www.npmjs.com/package/${PACKAGE_NAME}" >> $GITHUB_OUTPUT
         echo "🎉 Published: ${PACKAGE_NAME}@${PACKAGE_VERSION}"
