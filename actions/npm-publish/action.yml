@@ -1,5 +1,6 @@
 name: "npm-publish"
-description: "Action to publish npm packages using Trusted Publishing"
+description: "Composite action to publish npm packages using Trusted Publishing
+  (no internal checkout; parent workflow must checkout repository)"
 
 inputs:
   node-version:
@@ -47,6 +48,7 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # No checkout step included; parent workflow must checkout the repository before using this action
     # STEP 0: Log Details
     - name: Log Details
       shell: bash
@@ -81,11 +83,7 @@ runs:
             ;;
         esac
 
-    # STEP 2: Checkout
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # STEP 3a: Install pnpm BEFORE setup-node
+    # STEP 2a: Install pnpm BEFORE setup-node
     - name: Install pnpm
       if: ${{ inputs.package-manager == 'pnpm' }}
       uses: pnpm/action-setup@v4
@@ -100,7 +98,7 @@ runs:
         echo "  - pnpm version:        $(pnpm --version)"
         echo "  - pnpm store location: $(pnpm store path)"
 
-    # STEP 3b: Install yarn BEFORE setup-node
+    # STEP 2b: Install yarn BEFORE setup-node
     - name: Install yarn
       if: ${{ inputs.package-manager == 'yarn' }}
       shell: bash
@@ -110,7 +108,7 @@ runs:
         echo "  - yarn version:         $(yarn --version)"
         echo "  - yarn cache directory: $(yarn cache dir)"
 
-    # STEP 4: Setup Node.js
+    # STEP 3: Setup Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
@@ -134,7 +132,7 @@ runs:
         echo "  - NPM version:  $(npm --version)"
         echo "  - NPM registry: $(npm config get registry)"
 
-    # STEP 5: Install dependencies
+    # STEP 4: Install dependencies
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.work-dir }}
@@ -177,7 +175,7 @@ runs:
           npm ls --depth=0 || true
         fi
 
-    # STEP 6: Build
+    # STEP 5: Build
     - name: Build project
       shell: bash
       working-directory: ${{ inputs.work-dir }}
@@ -203,7 +201,7 @@ runs:
           [ -d "$dir" ] && du -sh "$dir" || true
         done
 
-    # STEP 7: Publish
+    # STEP 6: Publish
     - name: Publish to NPM
       id: publish
       shell: bash

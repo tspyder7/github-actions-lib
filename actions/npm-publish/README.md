@@ -13,6 +13,7 @@ A GitHub Action to publish your package to the NPM registry with support for npm
 - Publishes with public access
 - Uses NPM Trusted Publishing (no token required)
 - Outputs package information after publish
+- **No internal checkout** - expects parent workflow to handle repository checkout
 
 ---
 
@@ -189,6 +190,7 @@ jobs:
 - NPM Trusted Publishing configured on npmjs.com
 - Package.json must exist in the specified working directory
 - GitHub repository must be added to Trusted Publishing
+- Parent workflow must checkout the repository before using this action
 
 ---
 
