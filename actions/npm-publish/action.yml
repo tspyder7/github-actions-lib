@@ -1,6 +1,6 @@
 name: "npm-publish"
 description: "Composite action to publish npm packages using Trusted Publishing
-  (no internal checkout; parent workflow must checkout repository)"
+  (includes internal checkout)"
 
 inputs:
   node-version:
@@ -48,8 +48,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    # No checkout step included; parent workflow must checkout the repository before using this action
-    # STEP 0: Log Details
+    # Internal checkout step - parent workflow does not need to checkout
     - name: Log Details
       shell: bash
       run: |
@@ -66,6 +65,12 @@ runs:
         echo "  - Registry URL: ${{ inputs.registry-url }}"
         echo "  - Publish Tag: ${{ inputs.publish-tag }}"
         echo "📁 Working Directory: ${{ inputs.work-dir }}"
+
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        path: ${{ github.repository }}
+        fetch-depth: 0
 
     # STEP 1: Validate package manager
     - name: Validate package manager

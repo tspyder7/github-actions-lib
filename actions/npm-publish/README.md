@@ -13,7 +13,6 @@ A GitHub Action to publish your package to the NPM registry with support for npm
 - Publishes with public access
 - Uses NPM Trusted Publishing (no token required)
 - Outputs package information after publish
-- **No internal checkout** - expects parent workflow to handle repository checkout
 
 ---
 
@@ -26,8 +25,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - name: Publish to NPM
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
@@ -41,8 +38,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - name: Publish with pnpm
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
@@ -59,8 +54,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - name: Publish to NPM
         id: publish
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
@@ -80,8 +73,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - name: Publish from subdirectory
         uses: tspyder7/github-actions-lib/actions/npm-publish@main
         with:
@@ -147,8 +138,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
       - name: Get version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
@@ -190,7 +179,6 @@ jobs:
 - NPM Trusted Publishing configured on npmjs.com
 - Package.json must exist in the specified working directory
 - GitHub repository must be added to Trusted Publishing
-- Parent workflow must checkout the repository before using this action
 
 ---
 
