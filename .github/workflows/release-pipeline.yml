@@ -149,8 +149,9 @@ jobs:
         id: release-please
         run: |
           release_type="${{ steps.release-type.outputs.type }}"
-          config=".release/$release_type/config.json"
-          manifest=".release/$release_type/manifest.json"
+          type=$([ "$release_type" = "prod" ] && echo "latest" || echo "$release_type")
+          config=".release/$type/config.json"
+          manifest=".release/$type/manifest.json"
           echo "release_please_config=$config"       >> "$GITHUB_OUTPUT"
           echo "release_please_manifest=$manifest"   >> "$GITHUB_OUTPUT"
           echo "ℹ️  Config   : $config"
