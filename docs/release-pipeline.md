@@ -23,7 +23,7 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
    | `rc`         | `.release/rc/` |
    | `alpha`      | `.release/alpha/` |
    | `beta`       | `.release/beta/` |
-   | `latest`     | `.release/prod/` |
+   | `latest`     | `.release/latest/` |
 
    Follow the [Release Please configuration guide](https://github.com/googleapis/release-please#configuration) for content specifics.
 
@@ -65,7 +65,7 @@ The `setup-pipeline` job evaluates the trigger event to determine which jobs to 
 
 ## Example Caller Workflows
 
-### 1. Release Pipeline with sleep-for-whlie
+### 1. Release Pipeline with sleep-for-while
 
 Triggers on pushes to `main` with valid release commits, and supports manual `workflow_dispatch` for testing releases:
 
@@ -80,6 +80,8 @@ on:
         type: choice
         options:
           - rc
+          - alpha
+          - beta
           - latest
         default: latest
   push:
@@ -121,6 +123,8 @@ on:
         type: choice
         options:
           - rc
+          - alpha
+          - beta
           - latest
         default: latest
   push:
