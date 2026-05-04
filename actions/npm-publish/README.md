@@ -10,7 +10,10 @@ A GitHub Action to publish your package to the NPM registry with support for npm
 - Configurable Node.js version
 - Custom NPM registry support
 - Custom working directory
-- Publishes with public access
+- Automatic dependency installation with caching
+- Automatic build step (runs `build` script if present)
+- Publishes with provenance for supply chain security
+- Configurable publish tag and access level
 - Uses NPM Trusted Publishing (no token required)
 - Outputs package information after publish
 
@@ -163,6 +166,8 @@ jobs:
 
 ### Using with pnpm
 
+When using pnpm, ensure your `package.json` includes the `packageManager` field (e.g., `"packageManager": "pnpm@8.15.4"`). The action will automatically install the correct pnpm version.
+
 ```yaml
 - name: Publish with pnpm
   uses: tspyder7/github-actions-lib/actions/npm-publish@main
@@ -179,6 +184,8 @@ jobs:
 - NPM Trusted Publishing configured on npmjs.com
 - Package.json must exist in the specified working directory
 - GitHub repository must be added to Trusted Publishing
+- For pnpm: `package.json` must include the `packageManager` field (e.g., `"packageManager": "pnpm@8.15.4"`)
+- Workflow must run on `ubuntu-latest` for provenance support
 
 ---
 

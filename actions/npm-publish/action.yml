@@ -1,6 +1,5 @@
 name: "npm-publish"
-description: "Composite action to publish npm packages using Trusted Publishing
-  (includes internal checkout)"
+description: "Composite action to publish npm packages using Trusted Publishing"
 
 inputs:
   node-version:
@@ -48,7 +47,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    # Internal checkout step - parent workflow does not need to checkout
     - name: Log Details
       shell: bash
       run: |
@@ -69,8 +67,30 @@ runs:
     - name: Checkout code
       uses: actions/checkout@v5
       with:
-        path: ${{ github.repository }}
+        path: "codespace"
         fetch-depth: 0
+
+    - name: Resolve working directory
+      id: resolve-workdir
+      shell: bash
+      run: |
+        REPO_PATH="codespace"
+        WORK_DIR="${{ inputs.work-dir }}"
+
+        if [ "$WORK_DIR" = "." ]; then
+          FULL_PATH="$REPO_PATH"
+        else
+          FULL_PATH="$REPO_PATH/$WORK_DIR"
+        fi
+
+        echo "📁 Repository contents at $GITHUB_REF:"
+        echo "   - repo path:   $REPO_PATH"
+        echo "   - work-dir:    $WORK_DIR"
+        echo "   - full path:   $FULL_PATH"
+
+        ls -la "$FULL_PATH" || echo "No files found in $FULL_PATH"
+
+        echo "resolved-workdir=$FULL_PATH" >> $GITHUB_OUTPUT
 
     # STEP 1: Validate package manager
     - name: Validate package manager
@@ -91,9 +111,39 @@ runs:
     # STEP 2a: Install pnpm BEFORE setup-node
     - name: Install pnpm
       if: ${{ inputs.package-manager == 'pnpm' }}
-      uses: pnpm/action-setup@v4
-      with:
-        run_install: false
+      shell: bash
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
+      run: |
+        # Read packageManager field from package.json
+        PKG_MANAGER=$(jq -r '.packageManager // empty' package.json)
+
+        if [ -z "$PKG_MANAGER" ]; then
+          echo "❌ No packageManager field found in package.json"
+          exit 1
+        fi
+
+        echo "📦 Detected packageManager: $PKG_MANAGER"
+
+        # Extract version if format is like "pnpm@8.15.4"
+        if [[ "$PKG_MANAGER" =~ ^pnpm@([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+          VERSION="${BASH_REMATCH[1]}"
+          echo "⬇️ Installing pnpm@$VERSION..."
+          npm install -g "pnpm@$VERSION"
+        elif [[ "$PKG_MANAGER" =~ ^pnpm@.+$ ]]; then
+          VERSION="${PKG_MANAGER#pnpm@}"
+          echo "⬇️ Installing pnpm@$VERSION..."
+          npm install -g "pnpm@$VERSION"
+        elif [[ "$PKG_MANAGER" == "pnpm" ]]; then
+          echo "⬇️ Installing latest pnpm..."
+          npm install -g pnpm
+        else
+          echo "❌ Unsupported packageManager format: $PKG_MANAGER"
+          exit 1
+        fi
+
+        echo "📦 pnpm setup completed"
+        echo "  - pnpm version:        $(pnpm --version)"
+        echo "  - pnpm store location: $(pnpm store path)"
 
     - name: Log pnpm version
       if: ${{ inputs.package-manager == 'pnpm' }}
@@ -122,9 +172,11 @@ runs:
         cache: ${{ inputs.package-manager }}
         cache-dependency-path: >-
           ${{ inputs.package-manager == 'pnpm' && format('{0}/pnpm-lock.yaml',
-          inputs.work-dir) || inputs.package-manager == 'yarn' &&
-          format('{0}/yarn.lock', inputs.work-dir) ||
-          format('{0}/package-lock.json', inputs.work-dir) }}
+          steps.resolve-workdir.outputs.resolved-workdir) ||
+          inputs.package-manager == 'yarn' && format('{0}/yarn.lock',
+          steps.resolve-workdir.outputs.resolved-workdir) ||
+          format('{0}/package-lock.json',
+          steps.resolve-workdir.outputs.resolved-workdir) }}
 
     - name: Log Node.js setup
       shell: bash
@@ -140,7 +192,7 @@ runs:
     # STEP 4: Install dependencies
     - name: Install dependencies
       shell: bash
-      working-directory: ${{ inputs.work-dir }}
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
 
@@ -166,11 +218,10 @@ runs:
 
     - name: Log dependency installation results
       shell: bash
-      working-directory: ${{ inputs.work-dir }}
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
         echo "📊 Dependency installation summary:"
-        echo "  - node_modules size: $(du -sh node_modules 2>/dev/null || echo 'Not found')"
 
         if [[ "$PACKAGE_MANAGER" == "pnpm" ]]; then
           pnpm ls --depth=0 || true
@@ -183,7 +234,7 @@ runs:
     # STEP 5: Build
     - name: Build project
       shell: bash
-      working-directory: ${{ inputs.work-dir }}
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       run: |
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
 
@@ -201,16 +252,11 @@ runs:
           npm run build
         fi
 
-        echo "📊 Build output:"
-        for dir in dist build lib out public; do
-          [ -d "$dir" ] && du -sh "$dir" || true
-        done
-
     # STEP 6: Publish
     - name: Publish to NPM
       id: publish
       shell: bash
-      working-directory: ${{ inputs.work-dir }}
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       env:
         NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
       run: |
@@ -229,23 +275,22 @@ runs:
       id: publish-info
       if: success()
       shell: bash
-      working-directory: ${{ inputs.work-dir }}
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       run: |
         PACKAGE_NAME=$(cat package.json | jq -r '.name')
         PACKAGE_VERSION=$(cat package.json | jq -r '.version')
         echo "package-name=${PACKAGE_NAME}"       >> $GITHUB_OUTPUT
         echo "package-version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
         echo "published-url=https://www.npmjs.com/package/${PACKAGE_NAME}" >> $GITHUB_OUTPUT
-        echo "🎉 Published: ${PACKAGE_NAME}@${PACKAGE_VERSION}"
-        echo "🔗 https://www.npmjs.com/package/${PACKAGE_NAME}"
 
     - name: Log failure details
       if: failure()
       shell: bash
+      working-directory: ${{ steps.resolve-workdir.outputs.resolved-workdir }}
       run: |
         echo "❌ Workflow failed!"
         echo "  - Working directory contents:"
-        ls -la ${{ inputs.work-dir }} || true
+        ls -la || true
         echo "  - Node version: $(node --version)"
         echo "  - npm version:  $(npm --version)"
         if [[ "${{ inputs.package-manager }}" == "pnpm" ]]; then
