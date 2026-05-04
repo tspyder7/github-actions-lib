@@ -126,6 +126,9 @@ runs:
     - name: Log Node.js setup
       shell: bash
       run: |
+        # Update npm version >= 11.5.1 for trusted publishing support
+        npm install -g npm@11.13.0
+
         echo "⚡ Node.js setup completed"
         echo "  - Node version: $(node --version)"
         echo "  - NPM version:  $(npm --version)"
