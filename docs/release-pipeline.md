@@ -27,7 +27,7 @@ Reusable GitHub Actions workflow for automating release creation (via [Release P
 
    Follow the [Release Please configuration guide](https://github.com/googleapis/release-please#configuration) for content specifics.
 
-2. **Publish action**: The `publish` input requires a valid GitHub Action reference (e.g., `tspyder7/github-actions-lib/actions/npm-publish@main`). Ensure the action is accessible to the workflow.
+2. **Publish action (optional)**: The `publish` input, if provided, requires a valid GitHub Action reference (e.g., `tspyder7/github-actions-lib/actions/npm-publish@main`). Ensure the action is accessible to the workflow. Omit the input to skip the publish job entirely.
 
 ## Usage
 
@@ -41,7 +41,7 @@ All inputs are passed via the `with` block of the `uses` call in the parent work
 |------------|------|----------|---------|-------------|
 | `environment` | `string` | No | (none) | Target GitHub environment (e.g., `dev`, `staging`, `production`). Used only for approvals. |
 | `release-type` | `string` | No | `latest` | Release type for manual dispatch. Accepts `rc`, `alpha`, `beta`, `latest`. Ignored for push triggers. |
-| `publish` | `string` | Yes | (none) | Publish action configuration in JSON format. Must include a `uses` key (action reference) and optional `with` map (action inputs). |
+| `publish` | `string` | No | (none) | Publish action configuration in JSON format. Must include a `uses` key (action reference) and optional `with` map (action inputs). Omit to skip the publish job. |
 | `timeout_minutes` | `number` | No | `10` | Timeout in minutes for each job in the pipeline. |
 
 ### Secrets
@@ -159,5 +159,5 @@ jobs:
 |----------|-------------|-----------|
 | `setup-pipeline` | Evaluates trigger event and outputs job execution flags | Always first |
 | `release-generator` | Runs Release Please to create/update release PRs | `generate_release == 'true'` |
-| `publish` | Executes the publish action from the `publish` input | `publish_package == 'true'` |
+| `publish` | Executes the publish action from the `publish` input | `publish_package == 'true'` and `publish` input provided |
 | `summary` | Writes final pipeline results to workflow summary | Always (runs last) |
