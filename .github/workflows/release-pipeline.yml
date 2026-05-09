@@ -15,9 +15,9 @@ on:
         default: latest
       publish:
         description: "Publish action config in JSON format. Must include a 'uses' key
-          and optional 'with' map."
+          and optional 'with' map. If omitted, the publish job is skipped."
         type: string
-        required: true
+        required: false
       timeout_minutes:
         type: number
         default: 10
@@ -204,7 +204,7 @@ jobs:
   publish:
     name: Publish
     needs: [ setup-pipeline, release-generator ]
-    if: needs.setup-pipeline.outputs.publish_package == 'true'
+    if: needs.setup-pipeline.outputs.publish_package == 'true' && inputs.publish != ''
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.timeout_minutes }}
 
