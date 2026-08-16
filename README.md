@@ -11,7 +11,7 @@ This repository contains **reusable GitHub Actions** and **workflows** for inter
 | Action | Description | Documentation |
 |--------|-------------|---------------|
 | [`action-generator`](actions/action-generator/) | Generates composite actions | [README](actions/action-generator/README.md) |
-| [`npm-publish`](actions/npm-publish/) | Publish packages to NPM with npm/yarn/pnpm support | [README](actions/npm-publish/README.md) |
+| [`npm-publish`](actions/npm-publish/) | Publish packages to NPM with npm/yarn/pnpm/bun support | [README](actions/npm-publish/README.md) |
 | [`sleep-for-while`](actions/sleep-for-while/) | Sleeps for given seconds and optionally prints a message | [README](actions/sleep-for-while/README.md) |
 
 ---

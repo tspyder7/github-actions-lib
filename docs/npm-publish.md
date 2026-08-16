@@ -1,12 +1,12 @@
 # 🚀 [Publish to NPM Workflow](../workflows/npm-publish.yml)
 
-This reusable workflow automates publishing your package to the NPM registry using the specified package manager. It supports **npm**, **yarn**, and **pnpm**.
+This reusable workflow automates publishing your package to the NPM registry using the specified package manager. It supports **npm**, **yarn**, **pnpm**, and **bun**.
 
 ---
 
 ## ✅ Features
 
-- Validates supported package managers (`npm`, `yarn`, `pnpm`)
+- Validates supported package managers (`npm`, `yarn`, `pnpm`, `bun`)
 - Automatically sets up Node.js and project dependencies
 - Builds the project before publishing
 - Publishes the package to the specified registry with `--access public`
@@ -23,7 +23,7 @@ To use this workflow in your repository, define a workflow file that calls it us
 |-----------------|--------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | node-version    | string | No       | 22                             | Node.js version to use for setup and publishing |
 | registry-url    | string | No       | <https://registry.npmjs.org/>    | NPM registry URL where the package will be published |
-| package-manager | string | Yes      | —                              | Package manager to use (pnpm, yarn, or npm) for installing and build |
+| package-manager | string | Yes      | —                              | Package manager to use (pnpm, yarn, bun, or npm) for installing and build |
 | publish-tag | string | No      | latest                              | Tag the npm package |
 | timeout_minutes | number | No   | 10         | Custom Timeout in Minutes        |
 
