@@ -21,7 +21,7 @@ on:
       package-manager:
         type: string
         required: true
-        description: Package manager to use (pnpm, yarn, or npm) for installing and build
+        description: Package manager to use (pnpm, yarn, bun, or npm) for installing and build
 
       publish-tag:
         type: string
@@ -78,11 +78,11 @@ jobs:
         run: |
           echo "🔍 Validating package manager: $PACKAGE_MANAGER"
           case "$PACKAGE_MANAGER" in
-            pnpm|yarn|npm)
+            pnpm|yarn|bun|npm)
               echo "✅ Valid package manager: $PACKAGE_MANAGER"
               ;;
             *)
-              echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, npm"
+              echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, bun, npm"
               exit 1
               ;;
           esac
@@ -140,6 +140,19 @@ jobs:
           echo "  - yarn version: $(yarn --version)"
           echo "  - yarn cache directory: $(yarn cache dir)"
 
+      # STEP 4c: Setup bun if selected
+      - name: Setup bun
+        id: setup-bun
+        if: ${{ env.PACKAGE_MANAGER == 'bun' }}
+        uses: oven-sh/setup-bun@v2
+
+      - name: Log bun version
+        if: ${{ env.PACKAGE_MANAGER == 'bun' }}
+        run: |
+          echo "🥟 bun setup completed"
+          echo "  - bun version: $(bun --version)"
+          echo "  - bun cache directory: $(bun pm cache)"
+
       # STEP 5: Install project dependencies using the selected package manager
       - name: Install dependencies
         id: install-deps
@@ -160,6 +173,8 @@ jobs:
             pnpm install
           elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
             yarn install
+          elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+            bun install
           else
             npm install
           fi
@@ -175,6 +190,9 @@ jobs:
           elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
             echo "  - yarn list summary:"
             yarn list --depth=0 || true
+          elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+            echo "  - bun pm ls summary:"
+            bun pm ls || true
           else
             echo "  - npm ls summary:"
             npm ls --depth=0 || true
@@ -195,6 +213,8 @@ jobs:
               pnpm run build
             elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
               yarn build
+            elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+              bun run build
             else
               npm run build
             fi
@@ -247,11 +267,7 @@ jobs:
           fi
 
           echo "⏳ Publishing package..."
-          case "$PACKAGE_MANAGER" in
-            pnpm) pnpm publish --access public --no-git-checks --tag "$TAG" ;;
-            yarn) yarn publish --access public --non-interactive --tag "$TAG" ;;
-            *)    npm publish --access public --tag "$TAG" ;;
-          esac
+          npm publish --access public --provenance --tag "$TAG"
           echo "🎉 Package published successfully!"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
