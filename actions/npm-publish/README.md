@@ -1,12 +1,12 @@
 # npm-publish Action
 
-A GitHub Action to publish your package to the NPM registry with support for npm, yarn, and pnpm package managers.
+A GitHub Action to publish your package to the NPM registry with support for npm, yarn, pnpm, and bun package managers.
 
 ---
 
 ## Features
 
-- Supports multiple package managers: `npm`, `yarn`, and `pnpm`
+- Supports multiple package managers: `npm`, `yarn`, `pnpm`, and `bun`
 - Configurable Node.js version
 - Custom NPM registry support
 - Custom working directory
@@ -91,7 +91,7 @@ jobs:
 |------|------|----------|---------|-------------|
 | `node-version` | string | No | `24` | Node.js version to use for setup and publishing |
 | `registry-url` | string | No | `https://registry.npmjs.org/` | The npm registry URL where the package will be published |
-| `package-manager` | string | Yes | — | Package manager to use (`pnpm`, `yarn`, or `npm`) |
+| `package-manager` | string | Yes | — | Package manager to use (`pnpm`, `yarn`, `bun`, or `npm`) |
 | `publish-tag` | string | No | `latest` | Tag the npm package |
 | `publish-access` | string | No | `public` | Access level for the published package (`public` or `restricted`) |
 | `work-dir` | string | No | `.` | Directory where commands should run |
@@ -176,15 +176,31 @@ When using pnpm, ensure your `package.json` includes the `packageManager` field 
     publish-tag: beta
 ```
 
+### Using with bun
+
+When using bun, ensure your repository includes a `bun.lock` or `bun.lockb` file. The action installs bun via [`oven-sh/setup-bun@v2`](https://github.com/oven-sh/setup-bun), which honors the `packageManager`/`engines.bun` fields in `package.json`, and uses it for installation and build.
+
+Publishing is always performed with `npm publish --provenance`, regardless of the selected package manager.
+
+```yaml
+- name: Publish with bun
+  uses: tspyder7/github-actions-lib/actions/npm-publish@main
+  with:
+    package-manager: bun
+    publish-tag: beta
+```
+
 ---
 
 ## Requirements
 
 - Node.js 18+ (default: 24)
-- NPM Trusted Publishing configured on npmjs.com
+- NPM Trusted Publishing configured on npmjs.com (for npm/pnpm/yarn)
 - Package.json must exist in the specified working directory
 - GitHub repository must be added to Trusted Publishing
 - For pnpm: `package.json` must include the `packageManager` field (e.g., `"packageManager": "pnpm@8.15.4"`)
+- For bun: a `bun.lock`/`bun.lockb` file must exist
+- Publishing is always done via `npm publish --provenance` (OIDC trusted publishing), regardless of package manager
 - Workflow must run on `ubuntu-latest` for provenance support
 
 ---

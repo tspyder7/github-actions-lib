@@ -13,7 +13,7 @@ inputs:
     default: https://registry.npmjs.org/
 
   package-manager:
-    description: Package manager to use (pnpm, yarn, or npm)
+    description: Package manager to use (pnpm, yarn, bun, or npm)
     required: true
 
   publish-tag:
@@ -99,11 +99,11 @@ runs:
         PACKAGE_MANAGER="${{ inputs.package-manager }}"
         echo "🔍 Validating package manager: $PACKAGE_MANAGER"
         case "$PACKAGE_MANAGER" in
-          pnpm|yarn|npm)
+          pnpm|yarn|bun|npm)
             echo "✅ Valid package manager: $PACKAGE_MANAGER"
             ;;
           *)
-            echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, npm"
+            echo "❌ Invalid package manager: $PACKAGE_MANAGER. Must be one of: pnpm, yarn, bun, npm"
             exit 1
             ;;
         esac
@@ -163,17 +163,42 @@ runs:
         echo "  - yarn version:         $(yarn --version)"
         echo "  - yarn cache directory: $(yarn cache dir)"
 
+    # STEP 2c: Install bun BEFORE setup-node
+    - name: Setup bun
+      if: ${{ inputs.package-manager == 'bun' }}
+      uses: oven-sh/setup-bun@v2
+
+    - name: Log bun version
+      if: ${{ inputs.package-manager == 'bun' }}
+      shell: bash
+      run: |
+        echo "🥟 bun setup completed"
+        echo "  - bun version: $(bun --version)"
+        echo "  - bun cache directory: $(bun pm cache)"
+
+    # STEP 2d: Cache bun dependencies (setup-node does not support bun caching)
+    - name: Cache bun dependencies
+      if: ${{ inputs.package-manager == 'bun' }}
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: bun-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', steps.resolve-workdir.outputs.resolved-workdir), format('{0}/bun.lockb', steps.resolve-workdir.outputs.resolved-workdir)) }}
+        restore-keys: |
+          bun-${{ runner.os }}-
+
     # STEP 3: Setup Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: ${{ inputs.registry-url }}
-        cache: ${{ inputs.package-manager }}
+        cache: ${{ inputs.package-manager != 'bun' && inputs.package-manager || '' }}
         cache-dependency-path: >-
           ${{ inputs.package-manager == 'pnpm' && format('{0}/pnpm-lock.yaml',
           steps.resolve-workdir.outputs.resolved-workdir) ||
           inputs.package-manager == 'yarn' && format('{0}/yarn.lock',
+          steps.resolve-workdir.outputs.resolved-workdir) ||
+          inputs.package-manager == 'bun' && format('{0}/bun.lock',
           steps.resolve-workdir.outputs.resolved-workdir) ||
           format('{0}/package-lock.json',
           steps.resolve-workdir.outputs.resolved-workdir) }}
@@ -210,6 +235,8 @@ runs:
           pnpm install --frozen-lockfile
         elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
           yarn install --frozen-lockfile
+        elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+          bun install --frozen-lockfile
         else
           npm ci
         fi
@@ -227,6 +254,8 @@ runs:
           pnpm ls --depth=0 || true
         elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
           yarn list --depth=0 || true
+        elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+          bun pm ls || true
         else
           npm ls --depth=0 || true
         fi
@@ -248,6 +277,8 @@ runs:
           pnpm run build
         elif [[ "$PACKAGE_MANAGER" == "yarn" ]]; then
           yarn build
+        elif [[ "$PACKAGE_MANAGER" == "bun" ]]; then
+          bun run build
         else
           npm run build
         fi
@@ -295,4 +326,8 @@ runs:
         echo "  - npm version:  $(npm --version)"
         if [[ "${{ inputs.package-manager }}" == "pnpm" ]]; then
           echo "  - pnpm version: $(pnpm --version || echo 'not found')"
+        elif [[ "${{ inputs.package-manager }}" == "yarn" ]]; then
+          echo "  - yarn version: $(yarn --version || echo 'not found')"
+        elif [[ "${{ inputs.package-manager }}" == "bun" ]]; then
+          echo "  - bun version:  $(bun --version || echo 'not found')"
         fi
